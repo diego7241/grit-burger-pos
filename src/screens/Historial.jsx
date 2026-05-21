@@ -18,6 +18,8 @@ export default function Historial({ onBack }) {
   const [error, setError] = useState(null)
   const [confirmCancelar, setConfirmCancelar] = useState(null)
   const [cancelando, setCancelando] = useState(false)
+  const [confirmCobrar, setConfirmCobrar] = useState(null)
+  const [cobrando, setCobrando] = useState(false)
 
   useEffect(() => { cargar() }, [])
 
@@ -32,6 +34,18 @@ export default function Historial({ onBack }) {
     if (err) setError('No se pudo cargar el historial. Verifica tu conexión.')
     else if (data) setPedidos(data)
     setLoading(false)
+  }
+
+  const cobrarPedido = async () => {
+    if (!confirmCobrar) return
+    setCobrando(true)
+    const { error: err } = await supabase
+      .from('pedidos')
+      .update({ estado: 'entregado' })
+      .eq('id', confirmCobrar.id)
+    setCobrando(false)
+    setConfirmCobrar(null)
+    if (!err) cargar()
   }
 
   const cancelarPedido = async () => {
@@ -203,6 +217,19 @@ export default function Historial({ onBack }) {
                           }}>{p.metodo_pago}</span>
                         )}
                       </div>
+                      {!cancelado && p.estado !== 'entregado' && (p.tipo === 'llevar' || p.tipo === 'whatsapp') && (
+                        <button
+                          onClick={() => setConfirmCobrar(p)}
+                          style={{
+                            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                            background: 'rgba(34,197,94,0.1)',
+                            border: '1px solid rgba(34,197,94,0.25)',
+                            color: C.green, fontSize: 14, fontWeight: 800,
+                            cursor: 'pointer', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >✓</button>
+                      )}
                       {!cancelado && (
                         <button
                           onClick={() => setConfirmCancelar(p)}
@@ -227,6 +254,51 @@ export default function Historial({ onBack }) {
           </div>
         )}
       </div>
+
+      {/* Modal cobrar llevar/WA */}
+      {confirmCobrar && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+          display: 'flex', alignItems: 'flex-end', zIndex: 200, fontFamily: FONT,
+        }}>
+          <div style={{
+            width: '100%', background: C.card,
+            borderRadius: '20px 20px 0 0', padding: '24px 20px 44px',
+            borderTop: '1px solid rgba(34,197,94,0.3)',
+          }}>
+            <div style={{ fontSize: 10, color: C.green, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
+              {tipoLabel(confirmCobrar)} · #{confirmCobrar.numero}
+            </div>
+            <div style={{ fontFamily: DISPLAY, fontSize: 22, textTransform: 'uppercase', letterSpacing: -0.3, marginBottom: 4 }}>
+              ¿Marcar como cobrado?
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginBottom: 6 }}>
+              {Array.isArray(confirmCobrar.items) ? confirmCobrar.items.map(i => `${i.qty}× ${i.name}`).join(', ') : ''}
+            </div>
+            <div style={{ fontFamily: DISPLAY, fontSize: 28, color: C.accent, letterSpacing: -1, marginBottom: 24 }}>
+              S/{Number(confirmCobrar.total).toFixed(2)}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmCobrar(null)} disabled={cobrando} style={{
+                flex: 1, padding: '14px', borderRadius: 12,
+                border: `1px solid ${C.border}`, background: 'transparent',
+                color: C.muted, fontFamily: FONT, fontWeight: 700, fontSize: 14,
+                cursor: 'pointer', textTransform: 'uppercase',
+              }}>Volver</button>
+              <button onClick={cobrarPedido} disabled={cobrando} style={{
+                flex: 2, padding: '14px', borderRadius: 12, border: 0,
+                background: cobrando ? '#333' : 'rgba(34,197,94,0.9)',
+                color: cobrando ? '#777' : '#fff',
+                fontFamily: FONT, fontWeight: 800, fontSize: 14,
+                cursor: cobrando ? 'not-allowed' : 'pointer',
+                textTransform: 'uppercase', letterSpacing: 0.3,
+              }}>
+                {cobrando ? 'Guardando...' : '✓ Sí, cobrado'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal cancelar */}
       {confirmCancelar && (

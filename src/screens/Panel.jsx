@@ -76,8 +76,8 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
 
   const pedidosActivos = pedidosHoy.filter(p => p.estado !== 'cancelado')
   const totalHoy = pedidosActivos.reduce((s, p) => s + Number(p.total), 0)
-  const countLlevar = pedidosActivos.filter(p => p.tipo === 'llevar').length
-  const countWA = pedidosActivos.filter(p => p.tipo === 'whatsapp').length
+  const countLlevar = pedidosHoy.filter(p => p.tipo === 'llevar' && p.estado === 'confirmado').length
+  const countWA = pedidosHoy.filter(p => p.tipo === 'whatsapp' && p.estado === 'confirmado').length
   const hora = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
   const segundos = now.getSeconds().toString().padStart(2, '0')
   const fecha = now.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })
