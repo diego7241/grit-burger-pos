@@ -15,6 +15,7 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
   const [errorCarga, setErrorCarga] = useState(null)
   const [confirmCobro, setConfirmCobro] = useState(null) // { mesa, pedido }
   const [cobrandoId, setCobrandoId] = useState(null)
+  const [errorCobro, setErrorCobro] = useState(null)
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -58,14 +59,19 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
 
   const cobrarMesa = async () => {
     if (!confirmCobro) return
+    setErrorCobro(null)
     setCobrandoId(confirmCobro.pedido.id)
     const { error } = await supabase
       .from('pedidos')
       .update({ estado: 'entregado' })
       .eq('id', confirmCobro.pedido.id)
     setCobrandoId(null)
-    setConfirmCobro(null)
-    if (!error) cargarPedidosHoy()
+    if (error) {
+      setErrorCobro('No se pudo cobrar. Verifica tu conexión.')
+    } else {
+      setConfirmCobro(null)
+      cargarPedidosHoy()
+    }
   }
 
   const pedidosActivos = pedidosHoy.filter(p => p.estado !== 'cancelado')
@@ -96,7 +102,13 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
             <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginTop: 2, textTransform: 'capitalize' }}>{fecha}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>Ventas hoy</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 2 }}>
+              <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>Ventas hoy</div>
+              <button onClick={cargarPedidosHoy} style={{
+                background: 'transparent', border: 'none', color: C.dim,
+                cursor: 'pointer', fontSize: 14, padding: 0, lineHeight: 1,
+              }}>↻</button>
+            </div>
             <div style={{ fontFamily: DISPLAY, fontSize: 26, color: C.accent, letterSpacing: -0.5 }}>S/ {totalHoy.toFixed(0)}</div>
             <div style={{ fontSize: 10, color: C.green, fontWeight: 700, marginTop: 2 }}>▲ {pedidosActivos.length} pedidos</div>
           </div>
@@ -277,9 +289,16 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
             <div style={{ fontFamily: DISPLAY, fontSize: 36, color: C.accent, letterSpacing: -1, marginBottom: 24 }}>
               S/{Number(confirmCobro.pedido.total).toFixed(2)}
             </div>
+            {errorCobro && (
+              <div style={{
+                marginBottom: 16, padding: '10px 14px', borderRadius: 10,
+                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                color: '#ef4444', fontSize: 12, fontWeight: 700,
+              }}>{errorCobro}</div>
+            )}
             <div style={{ display: 'flex', gap: 10 }}>
               <button
-                onClick={() => setConfirmCobro(null)}
+                onClick={() => { setConfirmCobro(null); setErrorCobro(null) }}
                 disabled={!!cobrandoId}
                 style={{
                   flex: 1, padding: '14px', borderRadius: 12,
