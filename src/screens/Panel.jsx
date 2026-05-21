@@ -37,7 +37,7 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
       setPedidosHoy(data)
       const ocupadas = {}
       data.forEach(p => {
-        if (p.tipo === 'mesa' && p.mesa && p.estado !== 'entregado') {
+        if (p.tipo === 'mesa' && p.mesa && p.estado === 'confirmado') {
           if (!ocupadas[p.mesa]) ocupadas[p.mesa] = p
         }
       })
@@ -68,7 +68,10 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
     if (!error) cargarPedidosHoy()
   }
 
-  const totalHoy = pedidosHoy.reduce((s, p) => s + Number(p.total), 0)
+  const pedidosActivos = pedidosHoy.filter(p => p.estado !== 'cancelado')
+  const totalHoy = pedidosActivos.reduce((s, p) => s + Number(p.total), 0)
+  const countLlevar = pedidosActivos.filter(p => p.tipo === 'llevar').length
+  const countWA = pedidosActivos.filter(p => p.tipo === 'whatsapp').length
   const hora = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
   const segundos = now.getSeconds().toString().padStart(2, '0')
   const fecha = now.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -95,7 +98,7 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>Ventas hoy</div>
             <div style={{ fontFamily: DISPLAY, fontSize: 26, color: C.accent, letterSpacing: -0.5 }}>S/ {totalHoy.toFixed(0)}</div>
-            <div style={{ fontSize: 10, color: C.green, fontWeight: 700, marginTop: 2 }}>▲ {pedidosHoy.length} pedidos</div>
+            <div style={{ fontSize: 10, color: C.green, fontWeight: 700, marginTop: 2 }}>▲ {pedidosActivos.length} pedidos</div>
           </div>
         </div>
       </div>
@@ -197,20 +200,36 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button onClick={onTakeaway} style={bigBtn('#1a1a1a', C.border)}>
             <span style={{ fontSize: 20 }}>🛵</span>
-            <div style={{ textAlign: 'left' }}>
+            <div style={{ textAlign: 'left', flex: 1 }}>
               <div style={{ fontFamily: DISPLAY, fontSize: 16, textTransform: 'uppercase', letterSpacing: 0.5 }}>Para llevar</div>
               <div style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>Cliente recoge en local</div>
             </div>
-            <span style={{ color: C.muted, fontSize: 20 }}>›</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {countLlevar > 0 && (
+                <span style={{
+                  background: C.accentDim, color: C.accent, borderRadius: 6,
+                  padding: '2px 9px', fontFamily: DISPLAY, fontSize: 13,
+                }}>{countLlevar}</span>
+              )}
+              <span style={{ color: C.muted, fontSize: 20 }}>›</span>
+            </div>
           </button>
 
           <button onClick={onWhatsApp} style={bigBtn('#0d1f12', '#22c55e44')}>
             <span style={{ fontSize: 20 }}>📱</span>
-            <div style={{ textAlign: 'left' }}>
+            <div style={{ textAlign: 'left', flex: 1 }}>
               <div style={{ fontFamily: DISPLAY, fontSize: 16, textTransform: 'uppercase', letterSpacing: 0.5, color: C.green }}>Pedido WhatsApp</div>
               <div style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>Delivery por mensaje</div>
             </div>
-            <span style={{ color: C.muted, fontSize: 20 }}>›</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {countWA > 0 && (
+                <span style={{
+                  background: 'rgba(34,197,94,0.15)', color: C.green, borderRadius: 6,
+                  padding: '2px 9px', fontFamily: DISPLAY, fontSize: 13,
+                }}>{countWA}</span>
+              )}
+              <span style={{ color: C.muted, fontSize: 20 }}>›</span>
+            </div>
           </button>
         </div>
       </div>

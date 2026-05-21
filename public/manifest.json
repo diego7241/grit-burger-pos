@@ -1,0 +1,18 @@
+{
+  "name": "Grit Burger POS",
+  "short_name": "Grit Burger",
+  "description": "Sistema punto de venta Grit Burger",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#FF6B00",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

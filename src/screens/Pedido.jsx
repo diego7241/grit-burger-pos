@@ -12,16 +12,14 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
   const [pago, setPago] = useState(pedidoExistente?.metodo_pago || null)
   const [notaAbierta, setNotaAbierta] = useState(null)
   const [confirmSalir, setConfirmSalir] = useState(false)
+  const [conServicio, setConServicio] = useState(false)
 
   const esEdicion = !!pedidoExistente?.id
   const titulo = tipo === 'mesa' ? `Mesa ${mesa}` : tipo === 'llevar' ? 'Para llevar' : 'WhatsApp'
 
   const handleBack = () => {
-    if (cart.length > 0) {
-      setConfirmSalir(true)
-    } else {
-      onBack()
-    }
+    if (cart.length > 0) setConfirmSalir(true)
+    else onBack()
   }
 
   const add = (item) => {
@@ -50,6 +48,8 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
   }
 
   const subtotal = cart.reduce((s, c) => s + c.price * c.qty, 0)
+  const servicio = conServicio ? Math.round(subtotal * 10) / 100 : 0
+  const total = subtotal + servicio
   const canConfirm = cart.length > 0 && pago
 
   const handleConfirm = () => {
@@ -57,7 +57,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
     onConfirm({
       tipo, mesa, cliente,
       items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty, nota: c.nota || '' })),
-      subtotal, total: subtotal,
+      subtotal, servicio, total,
       metodo_pago: pago,
       notas: cart.filter(c => c.nota).map(c => `${c.name}: ${c.nota}`).join(' | '),
       pedidoExistenteId: pedidoExistente?.id || null,
@@ -105,8 +105,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
       {/* Category tabs */}
       <div style={{
         display: 'flex', gap: 0, overflowX: 'auto', padding: '10px 18px',
-        borderBottom: `1px solid ${C.border}`, flexShrink: 0,
-        scrollbarWidth: 'none',
+        borderBottom: `1px solid ${C.border}`, flexShrink: 0, scrollbarWidth: 'none',
       }}>
         {MENU_CATEGORIES.map(key => (
           <button key={key} onClick={() => setCat(key)} style={{
@@ -132,8 +131,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
               <div key={item.id} style={{
                 background: inCart ? 'rgba(255,107,0,0.08)' : C.card,
                 border: `1px solid ${inCart ? C.accent + '44' : C.border}`,
-                borderRadius: 12, padding: '12px 14px',
-                transition: 'all .15s',
+                borderRadius: 12, padding: '12px 14px', transition: 'all .15s',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -150,15 +148,14 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
                     )}
                     <button onClick={() => add(item)} style={qtyBtn(C.accent, C.accent)}>+</button>
                     {inCart && (
-                      <button onClick={() => setNotaAbierta(notaAbierta === item.id ? null : item.id)}
-                        style={{
-                          width: 32, height: 32, borderRadius: 8,
-                          border: `1px solid ${inCart.nota ? C.accent : C.border}`,
-                          background: inCart.nota ? C.accentDim : 'transparent',
-                          color: inCart.nota ? C.accent : C.muted,
-                          cursor: 'pointer', fontSize: 14,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>📝</button>
+                      <button onClick={() => setNotaAbierta(notaAbierta === item.id ? null : item.id)} style={{
+                        width: 32, height: 32, borderRadius: 8,
+                        border: `1px solid ${inCart.nota ? C.accent : C.border}`,
+                        background: inCart.nota ? C.accentDim : 'transparent',
+                        color: inCart.nota ? C.accent : C.muted,
+                        cursor: 'pointer', fontSize: 14,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>📝</button>
                     )}
                   </div>
                 </div>
@@ -172,10 +169,9 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
                       onChange={e => setNota(item.id, e.target.value)}
                       style={{
                         width: '100%', background: '#1a1a1a',
-                        border: `1px solid ${C.accent}66`,
-                        borderRadius: 8, padding: '8px 12px',
-                        color: C.text, fontFamily: FONT, fontWeight: 600, fontSize: 13,
-                        outline: 'none', boxSizing: 'border-box',
+                        border: `1px solid ${C.accent}66`, borderRadius: 8,
+                        padding: '8px 12px', color: C.text, fontFamily: FONT,
+                        fontWeight: 600, fontSize: 13, outline: 'none', boxSizing: 'border-box',
                       }}
                     />
                     {inCart.nota && (
@@ -188,8 +184,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
 
                 {!notaVisible && inCart?.nota && (
                   <div style={{
-                    marginTop: 8, padding: '5px 10px',
-                    background: C.accentDim, borderRadius: 6,
+                    marginTop: 8, padding: '5px 10px', background: C.accentDim, borderRadius: 6,
                     fontSize: 11, color: C.accent, fontWeight: 700,
                     display: 'flex', alignItems: 'center', gap: 6,
                   }}>
@@ -203,18 +198,13 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
       </div>
 
       {/* Bottom panel */}
-      <div style={{
-        padding: '12px 18px 28px', borderTop: `1px solid ${C.border}`,
-        background: C.card, flexShrink: 0,
-      }}>
+      <div style={{ padding: '12px 18px 28px', borderTop: `1px solid ${C.border}`, background: C.card, flexShrink: 0 }}>
+        {/* Resumen carrito */}
         {cart.length > 0 && (
           <div style={{ marginBottom: 10, maxHeight: 90, overflowY: 'auto' }}>
             {cart.map(c => (
               <div key={c.id} style={{ padding: '2px 0' }}>
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  fontSize: 12, fontWeight: 700, color: C.muted,
-                }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: C.muted }}>
                   <span><span style={{ color: C.accent }}>{c.qty}×</span> {c.name}</span>
                   <span style={{ color: C.text }}>S/{(c.price * c.qty).toFixed(2)}</span>
                 </div>
@@ -228,17 +218,61 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-          <span style={{ fontWeight: 700, fontSize: 13, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total</span>
-          <span style={{ fontFamily: DISPLAY, fontSize: 20, color: cart.length ? C.text : C.dim }}>
-            S/{subtotal.toFixed(2)}
-          </span>
+        {/* Totales */}
+        <div style={{ marginBottom: 10 }}>
+          {conServicio ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                <span style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>Subtotal</span>
+                <span style={{ fontFamily: DISPLAY, fontSize: 14, color: C.muted }}>S/{subtotal.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>Servicio (10%)</span>
+                <span style={{ fontFamily: DISPLAY, fontSize: 14, color: C.muted }}>S/{servicio.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: 6 }}>
+                <span style={{ fontWeight: 700, fontSize: 13, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total</span>
+                <span style={{ fontFamily: DISPLAY, fontSize: 20, color: cart.length ? C.text : C.dim }}>S/{total.toFixed(2)}</span>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 700, fontSize: 13, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total</span>
+              <span style={{ fontFamily: DISPLAY, fontSize: 20, color: cart.length ? C.text : C.dim }}>S/{subtotal.toFixed(2)}</span>
+            </div>
+          )}
         </div>
 
+        {/* Toggle cargo por servicio */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 10, padding: '8px 12px',
+          background: conServicio ? C.accentDim : 'transparent',
+          border: `1px solid ${conServicio ? C.accent + '33' : C.border}`,
+          borderRadius: 10, transition: 'all .15s',
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: conServicio ? C.accent : C.muted }}>
+            Cargo por servicio 10%
+          </span>
+          <button onClick={() => setConServicio(!conServicio)} style={{
+            width: 42, height: 24, borderRadius: 12, border: 'none',
+            background: conServicio ? C.accent : C.border,
+            cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0,
+          }}>
+            <div style={{
+              position: 'absolute', top: 3, width: 18, height: 18, borderRadius: '50%',
+              background: '#fff', transition: 'left .2s',
+              left: conServicio ? 21 : 3,
+            }} />
+          </button>
+        </div>
+
+        {/* Métodos de pago */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, marginBottom: 10 }}>
           {PAGOS.map(p => (
             <button key={p.id} onClick={() => setPago(p.id)} style={{
-              padding: '8px 4px', borderRadius: 8, border: `1px solid ${pago === p.id ? p.color : C.border}`,
+              padding: '8px 4px', borderRadius: 8,
+              border: `1px solid ${pago === p.id ? p.color : C.border}`,
               background: pago === p.id ? p.color : C.bg,
               color: pago === p.id ? '#fff' : C.muted,
               fontFamily: FONT, fontWeight: 800, fontSize: 11,
@@ -248,6 +282,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
           ))}
         </div>
 
+        {/* Confirmar */}
         <button onClick={handleConfirm} disabled={!canConfirm} style={{
           width: '100%', border: 0, padding: '15px', borderRadius: 14,
           background: canConfirm ? C.accent : '#333',
@@ -259,7 +294,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
           transition: 'all .15s',
         }}>
           {canConfirm
-            ? `${esEdicion ? 'Actualizar pedido' : 'Confirmar pedido'} · S/${subtotal.toFixed(2)}`
+            ? `${esEdicion ? 'Actualizar' : 'Confirmar'} · S/${total.toFixed(2)}`
             : 'Agrega productos y elige pago'}
         </button>
       </div>
@@ -308,8 +343,7 @@ function qtyBtn(borderColor, bg = 'transparent') {
     width: 32, height: 32, borderRadius: 8,
     border: `1px solid ${borderColor}`,
     background: bg === 'transparent' ? 'transparent' : bg,
-    color: '#fff',
-    fontSize: 18, cursor: 'pointer', fontWeight: 800,
+    color: '#fff', fontSize: 18, cursor: 'pointer', fontWeight: 800,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   }
 }

@@ -77,13 +77,17 @@ export default function Ticket({ pedido, onVolver }) {
     const pago = pedido.metodo_pago.toUpperCase()
     const hora = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
 
+    const totales = pedido.servicio > 0
+      ? `Subtotal: S/${pedido.subtotal.toFixed(2)}\nServicio (10%): S/${pedido.servicio.toFixed(2)}\n*TOTAL: S/${pedido.total.toFixed(2)}*`
+      : `*TOTAL: S/${pedido.total.toFixed(2)}*`
+
     const msg = `🔥 *GRIT BURGER POS*
 *${titulo}*
 Ticket #${guardado.numero} · ${hora}
 
 ${items}
 
-*TOTAL: S/${pedido.total.toFixed(2)}*
+${totales}
 Pago: ${pago}
 ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
 
@@ -187,10 +191,18 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
             ))}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ fontSize: 12, fontWeight: 700 }}>Subtotal</span>
-            <span style={{ fontSize: 12 }}>S/{pedido.subtotal.toFixed(2)}</span>
-          </div>
+          {pedido.servicio > 0 ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 700 }}>Subtotal</span>
+                <span style={{ fontSize: 12 }}>S/{pedido.subtotal.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 12, color: '#666' }}>Servicio (10%)</span>
+                <span style={{ fontSize: 12 }}>S/{pedido.servicio.toFixed(2)}</span>
+              </div>
+            </>
+          ) : null}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, borderTop: '1px solid #ccc', paddingTop: 8 }}>
             <span style={{ fontFamily: DISPLAY, fontSize: 16 }}>TOTAL</span>
             <span style={{ fontFamily: DISPLAY, fontSize: 16, color: C.accent }}>S/{pedido.total.toFixed(2)}</span>
