@@ -12,7 +12,6 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
   const [pago, setPago] = useState(pedidoExistente?.metodo_pago || null)
   const [notaAbierta, setNotaAbierta] = useState(null)
   const [confirmSalir, setConfirmSalir] = useState(false)
-  const [conServicio, setConServicio] = useState(false)
 
   const esEdicion = !!pedidoExistente?.id
   const titulo = tipo === 'mesa' ? `Mesa ${mesa}` : tipo === 'llevar' ? 'Para llevar' : 'WhatsApp'
@@ -47,9 +46,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
     setCart(prev => prev.map(c => c.id === id ? { ...c, nota } : c))
   }
 
-  const subtotal = cart.reduce((s, c) => s + c.price * c.qty, 0)
-  const servicio = conServicio ? Math.round(subtotal * 10) / 100 : 0
-  const total = subtotal + servicio
+  const total = cart.reduce((s, c) => s + c.price * c.qty, 0)
   const canConfirm = cart.length > 0 && pago
 
   const handleConfirm = () => {
@@ -57,7 +54,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
     onConfirm({
       tipo, mesa, cliente,
       items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty, nota: c.nota || '' })),
-      subtotal, servicio, total,
+      subtotal: total, total,
       metodo_pago: pago,
       notas: cart.filter(c => c.nota).map(c => `${c.name}: ${c.nota}`).join(' | '),
       pedidoExistenteId: pedidoExistente?.id || null,
@@ -220,51 +217,10 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
 
         {/* Totales */}
         <div style={{ marginBottom: 10 }}>
-          {conServicio ? (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <span style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>Subtotal</span>
-                <span style={{ fontFamily: DISPLAY, fontSize: 14, color: C.muted }}>S/{subtotal.toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>Servicio (10%)</span>
-                <span style={{ fontFamily: DISPLAY, fontSize: 14, color: C.muted }}>S/{servicio.toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: 6 }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total</span>
-                <span style={{ fontFamily: DISPLAY, fontSize: 20, color: cart.length ? C.text : C.dim }}>S/{total.toFixed(2)}</span>
-              </div>
-            </>
-          ) : (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total</span>
-              <span style={{ fontFamily: DISPLAY, fontSize: 20, color: cart.length ? C.text : C.dim }}>S/{subtotal.toFixed(2)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Toggle cargo por servicio */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginBottom: 10, padding: '8px 12px',
-          background: conServicio ? C.accentDim : 'transparent',
-          border: `1px solid ${conServicio ? C.accent + '33' : C.border}`,
-          borderRadius: 10, transition: 'all .15s',
-        }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: conServicio ? C.accent : C.muted }}>
-            Cargo por servicio 10%
-          </span>
-          <button onClick={() => setConServicio(!conServicio)} style={{
-            width: 42, height: 24, borderRadius: 12, border: 'none',
-            background: conServicio ? C.accent : C.border,
-            cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0,
-          }}>
-            <div style={{
-              position: 'absolute', top: 3, width: 18, height: 18, borderRadius: '50%',
-              background: '#fff', transition: 'left .2s',
-              left: conServicio ? 21 : 3,
-            }} />
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontWeight: 700, fontSize: 13, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total</span>
+            <span style={{ fontFamily: DISPLAY, fontSize: 20, color: cart.length ? C.text : C.dim }}>S/{total.toFixed(2)}</span>
+          </div>
         </div>
 
         {/* Métodos de pago */}
