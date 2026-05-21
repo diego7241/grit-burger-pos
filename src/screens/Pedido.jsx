@@ -2,13 +2,27 @@ import { useState } from 'react'
 import { C, FONT, DISPLAY } from '../lib/theme'
 import { MENU, MENU_CATEGORIES } from '../lib/menu'
 
-export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
+export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm, onBack }) {
   const [cat, setCat] = useState('hamburguesas')
-  const [cart, setCart] = useState([])
-  const [pago, setPago] = useState(null)
-  const [notaAbierta, setNotaAbierta] = useState(null) // id del producto con nota abierta
+  const [cart, setCart] = useState(() =>
+    pedidoExistente?.items
+      ? pedidoExistente.items.map(i => ({ ...i, nota: i.nota || '' }))
+      : []
+  )
+  const [pago, setPago] = useState(pedidoExistente?.metodo_pago || null)
+  const [notaAbierta, setNotaAbierta] = useState(null)
+  const [confirmSalir, setConfirmSalir] = useState(false)
 
+  const esEdicion = !!pedidoExistente?.id
   const titulo = tipo === 'mesa' ? `Mesa ${mesa}` : tipo === 'llevar' ? 'Para llevar' : 'WhatsApp'
+
+  const handleBack = () => {
+    if (cart.length > 0) {
+      setConfirmSalir(true)
+    } else {
+      onBack()
+    }
+  }
 
   const add = (item) => {
     setCart(prev => {
@@ -46,6 +60,7 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
       subtotal, total: subtotal,
       metodo_pago: pago,
       notas: cart.filter(c => c.nota).map(c => `${c.name}: ${c.nota}`).join(' | '),
+      pedidoExistenteId: pedidoExistente?.id || null,
     })
   }
 
@@ -66,16 +81,16 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
       {/* Header */}
       <div style={{ padding: '54px 18px 12px', borderBottom: `1px solid ${C.border}`, background: C.card, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onBack} style={{
+          <button onClick={handleBack} style={{
             width: 38, height: 38, borderRadius: 10, background: C.bg,
             border: `1px solid ${C.border}`, color: C.text, cursor: 'pointer', fontSize: 20,
           }}>‹</button>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 10, color: C.accent, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase' }}>
-              {titulo}
+              {titulo}{esEdicion && <span style={{ marginLeft: 6, color: C.green }}>· editando</span>}
             </div>
             <div style={{ fontFamily: DISPLAY, fontSize: 20, textTransform: 'uppercase', letterSpacing: -0.3 }}>
-              Tomar pedido
+              {esEdicion ? 'Agregar al pedido' : 'Tomar pedido'}
             </div>
           </div>
           {cart.length > 0 && (
@@ -148,7 +163,6 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
                   </div>
                 </div>
 
-                {/* Campo de nota por producto */}
                 {notaVisible && (
                   <div style={{ marginTop: 10 }}>
                     <input
@@ -172,7 +186,6 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
                   </div>
                 )}
 
-                {/* Nota guardada visible aunque esté cerrada */}
                 {!notaVisible && inCart?.nota && (
                   <div style={{
                     marginTop: 8, padding: '5px 10px',
@@ -194,7 +207,6 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
         padding: '12px 18px 28px', borderTop: `1px solid ${C.border}`,
         background: C.card, flexShrink: 0,
       }}>
-        {/* Cart summary */}
         {cart.length > 0 && (
           <div style={{ marginBottom: 10, maxHeight: 90, overflowY: 'auto' }}>
             {cart.map(c => (
@@ -216,7 +228,6 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
           </div>
         )}
 
-        {/* Total */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
           <span style={{ fontWeight: 700, fontSize: 13, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total</span>
           <span style={{ fontFamily: DISPLAY, fontSize: 20, color: cart.length ? C.text : C.dim }}>
@@ -224,7 +235,6 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
           </span>
         </div>
 
-        {/* Métodos de pago */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, marginBottom: 10 }}>
           {PAGOS.map(p => (
             <button key={p.id} onClick={() => setPago(p.id)} style={{
@@ -238,7 +248,6 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
           ))}
         </div>
 
-        {/* Confirmar */}
         <button onClick={handleConfirm} disabled={!canConfirm} style={{
           width: '100%', border: 0, padding: '15px', borderRadius: 14,
           background: canConfirm ? C.accent : '#333',
@@ -249,9 +258,47 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
           boxShadow: canConfirm ? `0 8px 24px rgba(255,107,0,0.4)` : 'none',
           transition: 'all .15s',
         }}>
-          {canConfirm ? `Confirmar pedido · S/${subtotal.toFixed(2)}` : 'Agrega productos y elige pago'}
+          {canConfirm
+            ? `${esEdicion ? 'Actualizar pedido' : 'Confirmar pedido'} · S/${subtotal.toFixed(2)}`
+            : 'Agrega productos y elige pago'}
         </button>
       </div>
+
+      {/* Modal confirmación salir */}
+      {confirmSalir && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+          display: 'flex', alignItems: 'flex-end', zIndex: 100, fontFamily: FONT,
+        }}>
+          <div style={{
+            width: '100%', background: C.card,
+            borderRadius: '20px 20px 0 0', padding: '24px 20px 44px',
+            borderTop: `1px solid ${C.border}`,
+          }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 22, textTransform: 'uppercase', letterSpacing: -0.3, marginBottom: 6 }}>
+              ¿Salir sin confirmar?
+            </div>
+            <div style={{ fontSize: 13, color: C.muted, fontWeight: 600, marginBottom: 24 }}>
+              Se perderá el carrito con {cart.reduce((s, c) => s + c.qty, 0)} productos
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={onBack} style={{
+                flex: 1, padding: '14px', borderRadius: 12,
+                border: `1px solid ${C.border}`, background: 'transparent',
+                color: C.muted, fontFamily: FONT, fontWeight: 700, fontSize: 14,
+                cursor: 'pointer', textTransform: 'uppercase',
+              }}>Salir</button>
+              <button onClick={() => setConfirmSalir(false)} style={{
+                flex: 2, padding: '14px', borderRadius: 12,
+                border: 0, background: C.accent, color: '#fff',
+                fontFamily: FONT, fontWeight: 800, fontSize: 14,
+                cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.3,
+                boxShadow: `0 8px 24px rgba(255,107,0,0.35)`,
+              }}>Seguir editando</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

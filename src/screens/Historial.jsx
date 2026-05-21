@@ -5,10 +5,17 @@ import { C, FONT, DISPLAY } from '../lib/theme'
 const PAGO_COLORS = { yape: C.yape, plin: C.plin, tarjeta: '#2563eb', efectivo: '#16a34a' }
 const FILTROS = ['todos', 'mesa', 'llevar', 'whatsapp']
 
+// Lima es UTC-5, sin horario de verano
+function inicioHoyLima() {
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })
+  return `${hoy}T05:00:00.000Z`
+}
+
 export default function Historial({ onBack }) {
   const [pedidos, setPedidos] = useState([])
   const [filtro, setFiltro] = useState('todos')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     cargar()
@@ -16,13 +23,17 @@ export default function Historial({ onBack }) {
 
   const cargar = async () => {
     setLoading(true)
-    const hoy = new Date().toISOString().split('T')[0]
-    const { data } = await supabase
+    setError(null)
+    const { data, error: err } = await supabase
       .from('pedidos')
       .select('*')
-      .gte('created_at', hoy)
+      .gte('created_at', inicioHoyLima())
       .order('created_at', { ascending: false })
-    if (data) setPedidos(data)
+    if (err) {
+      setError('No se pudo cargar el historial. Verifica tu conexión.')
+    } else if (data) {
+      setPedidos(data)
+    }
     setLoading(false)
   }
 
@@ -71,7 +82,7 @@ export default function Historial({ onBack }) {
         <div style={{ display: 'flex', gap: 6 }}>
           {FILTROS.map(f => (
             <button key={f} onClick={() => setFiltro(f)} style={{
-              padding: '5px 12px', borderRadius: 8, border: 'none',
+              padding: '5px 12px', borderRadius: 8,
               background: filtro === f ? C.accent : C.bg,
               color: filtro === f ? '#fff' : C.muted,
               fontFamily: FONT, fontWeight: 800, fontSize: 10,
@@ -88,6 +99,17 @@ export default function Historial({ onBack }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 18px 24px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40, color: C.muted, fontWeight: 700 }}>Cargando...</div>
+        ) : error ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <div style={{ fontSize: 32, opacity: 0.5, marginBottom: 12 }}>⚠️</div>
+            <div style={{ color: '#ef4444', fontWeight: 700, fontSize: 13, marginBottom: 16 }}>{error}</div>
+            <button onClick={cargar} style={{
+              background: C.accent, color: '#fff', border: 0,
+              borderRadius: 10, padding: '10px 20px',
+              fontFamily: FONT, fontWeight: 800, cursor: 'pointer',
+              textTransform: 'uppercase', fontSize: 12,
+            }}>↻ Reintentar</button>
+          </div>
         ) : filtrados.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
             <div style={{ fontSize: 36, opacity: 0.4 }}>📋</div>
@@ -107,6 +129,9 @@ export default function Historial({ onBack }) {
                     </div>
                     <div style={{ fontSize: 10, color: C.dim, fontWeight: 700, marginTop: 2 }}>
                       {new Date(p.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                      {p.estado === 'entregado' && (
+                        <span style={{ marginLeft: 6, color: C.green }}>· cobrado</span>
+                      )}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>

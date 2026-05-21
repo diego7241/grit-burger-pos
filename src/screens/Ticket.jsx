@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { C, FONT, DISPLAY, WHATSAPP_COCINA } from '../lib/theme'
 
-export default function Ticket({ pedido, onVolver, onNuevoPedido }) {
+const PAGO_COLORS = { yape: C.yape, plin: C.plin, tarjeta: '#2563eb', efectivo: '#16a34a' }
+
+export default function Ticket({ pedido, onVolver }) {
   const [guardado, setGuardado] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [pagoEfectivo, setPagoEfectivo] = useState('')
+
+  const esActualizacion = !!pedido.pedidoExistenteId
 
   useEffect(() => {
     guardarPedido()
@@ -13,37 +18,62 @@ export default function Ticket({ pedido, onVolver, onNuevoPedido }) {
 
   const guardarPedido = async () => {
     setLoading(true)
-    const { data, error: err } = await supabase
-      .from('pedidos')
-      .insert([{
-        tipo: pedido.tipo,
-        mesa: pedido.mesa || null,
-        cliente: pedido.cliente || null,
-        items: pedido.items,
-        subtotal: pedido.subtotal,
-        total: pedido.total,
-        metodo_pago: pedido.metodo_pago,
-        notas: pedido.notas || null,
-        estado: 'confirmado',
-      }])
-      .select()
-      .single()
-
-    if (err) setError(err.message)
-    else setGuardado(data)
-    setLoading(false)
+    setError(null)
+    try {
+      let result
+      if (esActualizacion) {
+        result = await supabase
+          .from('pedidos')
+          .update({
+            items: pedido.items,
+            subtotal: pedido.subtotal,
+            total: pedido.total,
+            metodo_pago: pedido.metodo_pago,
+            notas: pedido.notas || null,
+          })
+          .eq('id', pedido.pedidoExistenteId)
+          .select()
+          .single()
+      } else {
+        result = await supabase
+          .from('pedidos')
+          .insert([{
+            tipo: pedido.tipo,
+            mesa: pedido.mesa || null,
+            cliente: pedido.cliente || null,
+            items: pedido.items,
+            subtotal: pedido.subtotal,
+            total: pedido.total,
+            metodo_pago: pedido.metodo_pago,
+            notas: pedido.notas || null,
+            estado: 'confirmado',
+          }])
+          .select()
+          .single()
+      }
+      if (result.error) setError(result.error.message)
+      else setGuardado(result.data)
+    } catch (e) {
+      setError('Error de conexión. Intenta de nuevo.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const enviarWhatsApp = () => {
     if (!guardado) return
-    const titulo = pedido.tipo === 'mesa' ? `🍽 MESA ${pedido.mesa}` :
+
+    const tipoBase = pedido.tipo === 'mesa' ? `🍽 MESA ${pedido.mesa}` :
       pedido.tipo === 'llevar' ? `🛵 PARA LLEVAR${pedido.cliente ? ` — ${pedido.cliente}` : ''}` :
       `📱 WHATSAPP${pedido.cliente ? ` — ${pedido.cliente}` : ''}`
+
+    const titulo = esActualizacion ? `🔄 ACTUALIZACIÓN · ${tipoBase}` : tipoBase
 
     const items = pedido.items.map(i => {
       const linea = `  ${i.qty}× ${i.name} — S/${(i.price * i.qty).toFixed(2)}`
       return i.nota ? `${linea}\n     📝 ${i.nota}` : linea
     }).join('\n')
+
     const pago = pedido.metodo_pago.toUpperCase()
     const hora = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
 
@@ -61,22 +91,41 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
     window.open(url, '_blank')
   }
 
-  const PAGO_COLORS = { yape: C.yape, plin: C.plin, tarjeta: '#2563eb', efectivo: '#16a34a' }
+  // Calculadora de vuelto
+  const montoEfectivo = pagoEfectivo !== '' ? parseFloat(pagoEfectivo) : null
+  const vuelto = montoEfectivo !== null ? montoEfectivo - pedido.total : null
 
   if (loading) return (
     <div style={{ width: '100%', height: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: C.muted, fontFamily: FONT, fontWeight: 700, fontSize: 14 }}>Guardando pedido...</div>
+      <div style={{ color: C.muted, fontFamily: FONT, fontWeight: 700, fontSize: 14 }}>
+        {esActualizacion ? 'Actualizando pedido...' : 'Guardando pedido...'}
+      </div>
     </div>
   )
 
   if (error) return (
     <div style={{ width: '100%', height: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 28 }}>
-      <div style={{ color: '#ef4444', fontFamily: FONT, fontWeight: 700, fontSize: 14, textAlign: 'center', marginBottom: 16 }}>
-        Error al guardar: {error}
+      <div style={{ fontSize: 32, marginBottom: 16 }}>⚠️</div>
+      <div style={{ color: '#ef4444', fontFamily: FONT, fontWeight: 700, fontSize: 14, textAlign: 'center', marginBottom: 20 }}>
+        {error}
       </div>
-      <button onClick={guardarPedido} style={{ background: C.accent, color: '#fff', border: 0, borderRadius: 10, padding: '12px 24px', fontFamily: FONT, fontWeight: 800, cursor: 'pointer' }}>
-        Reintentar
-      </button>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={guardarPedido} style={{
+          background: C.accent, color: '#fff', border: 0, borderRadius: 10,
+          padding: '12px 24px', fontFamily: FONT, fontWeight: 800, cursor: 'pointer',
+          textTransform: 'uppercase', fontSize: 13,
+        }}>
+          Reintentar
+        </button>
+        <button onClick={onVolver} style={{
+          background: 'transparent', color: C.muted,
+          border: `1px solid ${C.border}`, borderRadius: 10,
+          padding: '12px 24px', fontFamily: FONT, fontWeight: 700, cursor: 'pointer',
+          textTransform: 'uppercase', fontSize: 13,
+        }}>
+          Volver
+        </button>
+      </div>
     </div>
   )
 
@@ -91,7 +140,9 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
       {/* Header */}
       <div style={{ padding: '54px 18px 16px', borderBottom: `1px solid ${C.border}`, background: C.card }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 10, color: C.green, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase' }}>✓ Pedido confirmado</span>
+          <span style={{ fontSize: 10, color: C.green, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase' }}>
+            ✓ {esActualizacion ? 'Pedido actualizado' : 'Pedido confirmado'}
+          </span>
         </div>
         <div style={{ fontFamily: DISPLAY, fontSize: 22, textTransform: 'uppercase', letterSpacing: -0.3, marginTop: 2 }}>
           Ticket #{guardado?.numero}
@@ -104,7 +155,6 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
           background: '#fff', color: '#1a1a1a', borderRadius: 16,
           padding: '20px 18px', fontFamily: "'JetBrains Mono', monospace",
         }}>
-          {/* Header ticket */}
           <div style={{ textAlign: 'center', borderBottom: '1px dashed #ccc', paddingBottom: 12, marginBottom: 12 }}>
             <div style={{ fontFamily: DISPLAY, fontSize: 20, textTransform: 'uppercase', letterSpacing: -0.5 }}>Grit Burger</div>
             <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>Sistema POS</div>
@@ -166,6 +216,51 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
             ¡Gracias por tu compra!<br />gritburger.pe
           </div>
         </div>
+
+        {/* Calculadora de vuelto — solo efectivo */}
+        {pedido.metodo_pago === 'efectivo' && (
+          <div style={{
+            marginTop: 12, background: C.card, border: `1px solid ${C.border}`,
+            borderRadius: 14, padding: '14px 16px',
+          }}>
+            <div style={{ fontSize: 10, color: C.muted, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>
+              Calculadora de vuelto
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 13, color: C.muted, fontWeight: 700, flexShrink: 0 }}>Paga con S/</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                placeholder="0"
+                value={pagoEfectivo}
+                onChange={e => setPagoEfectivo(e.target.value)}
+                style={{
+                  flex: 1, background: C.bg,
+                  border: `1px solid ${C.border}`, borderRadius: 10,
+                  padding: '10px 14px', color: C.text,
+                  fontFamily: DISPLAY, fontSize: 20,
+                  outline: 'none', textAlign: 'right',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            {vuelto !== null && (
+              <div style={{
+                marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                background: vuelto >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                border: `1px solid ${vuelto >= 0 ? '#22c55e44' : '#ef444444'}`,
+                borderRadius: 10, padding: '10px 14px',
+              }}>
+                <span style={{ fontSize: 12, color: C.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1 }}>
+                  {vuelto >= 0 ? 'Vuelto' : 'Falta'}
+                </span>
+                <span style={{ fontFamily: DISPLAY, fontSize: 24, color: vuelto >= 0 ? C.green : '#ef4444' }}>
+                  S/{Math.abs(vuelto).toFixed(2)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Botones */}
@@ -192,5 +287,3 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
     </div>
   )
 }
-
-const PAGO_COLORS = { yape: C.yape, plin: C.plin, tarjeta: '#2563eb', efectivo: '#16a34a' }
