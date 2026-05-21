@@ -1,0 +1,87 @@
+export const MENU = {
+  promociones: {
+    label: 'Promos',
+    emoji: '🔥',
+    items: [
+      { id: 'p1', name: '12 Alitas', desc: '2 sabores + papas + ½L chicha', price: 39 },
+      { id: 'p2', name: 'Dúo Burger Royal', desc: '2 Royal + ½L chicha gratis', price: 32 },
+      { id: 'p3', name: 'Salchi Papa Royal', desc: '2 salchipapas Royal + Inka Kola 600ml', price: 32 },
+      { id: 'p4', name: 'Combo Para 2', desc: 'Salchipapa mixta para 2 + ½L chicha', price: 31 },
+    ],
+  },
+  hamburguesas: {
+    label: 'Hamburguesas',
+    emoji: '🍔',
+    items: [
+      { id: 'h1', name: 'Clásica', desc: 'Pan brioche, carne, tomate, lechuga, papas', price: 13 },
+      { id: 'h2', name: 'Royal', desc: 'Pan brioche, carne, queso, jamón, tomate, lechuga, papas', price: 16 },
+      { id: 'h3', name: 'Ranchera', desc: 'Carne, queso, jamón, chorizo, tomate, lechuga, papas', price: 17 },
+      { id: 'h4', name: 'A lo Pobre', desc: 'Carne, huevo, queso cheddar, plátano frito, papas', price: 17 },
+      { id: 'h5', name: 'Pollo Deshilachado', desc: 'Pollo deshilachado, queso, jamón, huevo, papas', price: 16 },
+    ],
+  },
+  alitas: {
+    label: 'Alitas',
+    emoji: '🍗',
+    items: [
+      { id: 'a1', name: 'BBQ', desc: '6 alitas crujientes + papas', price: 20 },
+      { id: 'a2', name: 'BBQ Picante', desc: '6 alitas ahumadas picantes + papas', price: 20 },
+      { id: 'a3', name: 'BBQ Maracuyá', desc: '6 alitas dulce ahumado maracuyá + papas', price: 20 },
+      { id: 'a4', name: 'Acevichada', desc: '6 alitas salsa acevichada + papas', price: 20 },
+      { id: 'a5', name: 'Buffalo', desc: '6 alitas estilo americano picante + papas', price: 20 },
+      { id: 'a6', name: 'Maracuyá', desc: '6 alitas reducción dulce + papas', price: 20 },
+      { id: 'a7', name: 'Crispy', desc: '6 alitas extra crujientes sin salsa + papas', price: 20 },
+      { id: 'a8', name: 'Honey Mustard', desc: '6 alitas miel y mostaza + papas', price: 20 },
+      { id: 'a9', name: 'Teriyaki', desc: '6 alitas salsa oriental dulce + papas', price: 20 },
+    ],
+  },
+  salchipapas: {
+    label: 'Salchipapas',
+    emoji: '🌭',
+    items: [
+      { id: 's1', name: 'Clásica', desc: 'Hot dog ahumado + papas fritas', price: 12 },
+      { id: 's2', name: 'Royal', desc: 'Hot dog, papas, huevo, queso', price: 16 },
+      { id: 's3', name: 'Mixta', desc: 'Hot dog, chorizo parrillero, papas', price: 17 },
+      { id: 's4', name: 'A lo Pobre', desc: 'Hot dog, queso, huevo, plátano, papas', price: 17 },
+      { id: 's5', name: 'Nuggets', desc: 'Hot dog, nuggets de pollo, papas', price: 19 },
+      { id: 's6', name: 'Nuggets a lo Pobre', desc: 'Hot dog, nuggets, plátano, papas', price: 20 },
+      { id: 's7', name: 'Burger', desc: 'Hot dog, hamburguesa en trozos, papas', price: 17 },
+    ],
+  },
+  bebidas: {
+    label: 'Bebidas',
+    emoji: '🥤',
+    items: [
+      { id: 'b1', name: 'Limonada Clásica (vaso)', desc: 'Vaso', price: 6 },
+      { id: 'b2', name: 'Limonada Clásica (litro)', desc: 'Litro', price: 14 },
+      { id: 'b3', name: 'Limonada Hierba Luisa (vaso)', desc: 'Vaso', price: 6 },
+      { id: 'b4', name: 'Limonada Hierba Luisa (litro)', desc: 'Litro', price: 14 },
+      { id: 'b5', name: 'Limonada Frozen (vaso)', desc: 'Vaso', price: 7 },
+      { id: 'b6', name: 'Limonada Frozen (litro)', desc: 'Litro', price: 17 },
+      { id: 'b7', name: 'Maracuyá (vaso)', desc: 'Vaso', price: 6 },
+      { id: 'b8', name: 'Maracuyá (litro)', desc: 'Litro', price: 14 },
+      { id: 'b9', name: 'Maracuyá Frozen (vaso)', desc: 'Vaso', price: 7 },
+      { id: 'b10', name: 'Maracuyá Frozen (litro)', desc: 'Litro', price: 17 },
+      { id: 'b11', name: 'Chicha Morada (vaso)', desc: 'Vaso', price: 6 },
+      { id: 'b12', name: 'Chicha Morada (litro)', desc: 'Litro', price: 14 },
+      { id: 'b13', name: 'Inka Kola 600ml', desc: 'Botella', price: 3 },
+      { id: 'b14', name: 'Coca Cola 600ml', desc: 'Botella', price: 3 },
+      { id: 'b15', name: 'Agua San Mateo', desc: 'Botella', price: 3 },
+    ],
+  },
+  complementos: {
+    label: 'Extras',
+    emoji: '➕',
+    items: [
+      { id: 'e1', name: 'Huevo frito', desc: 'Extra', price: 2 },
+      { id: 'e2', name: 'Hot dog ahumado', desc: 'Extra', price: 2 },
+      { id: 'e3', name: 'Queso', desc: 'Extra', price: 2 },
+      { id: 'e4', name: 'Jamón', desc: 'Extra', price: 1.5 },
+      { id: 'e5', name: 'Chorizo', desc: 'Extra', price: 2.5 },
+      { id: 'e6', name: 'Plátano frito', desc: 'Extra', price: 2 },
+      { id: 'e7', name: 'Porción de papas', desc: 'Extra', price: 7 },
+    ],
+  },
+}
+
+export const MENU_CATEGORIES = Object.keys(MENU)
