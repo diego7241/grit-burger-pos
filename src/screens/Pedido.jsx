@@ -6,7 +6,7 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
   const [cat, setCat] = useState('hamburguesas')
   const [cart, setCart] = useState([])
   const [pago, setPago] = useState(null)
-  const [notas, setNotas] = useState('')
+  const [notaAbierta, setNotaAbierta] = useState(null) // id del producto con nota abierta
 
   const titulo = tipo === 'mesa' ? `Mesa ${mesa}` : tipo === 'llevar' ? 'Para llevar' : 'WhatsApp'
 
@@ -14,17 +14,25 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
     setCart(prev => {
       const ex = prev.find(c => c.id === item.id)
       if (ex) return prev.map(c => c.id === item.id ? { ...c, qty: c.qty + 1 } : c)
-      return [...prev, { ...item, qty: 1 }]
+      return [...prev, { ...item, qty: 1, nota: '' }]
     })
+    setNotaAbierta(item.id)
   }
 
   const remove = (id) => {
     setCart(prev => {
       const ex = prev.find(c => c.id === id)
       if (!ex) return prev
-      if (ex.qty === 1) return prev.filter(c => c.id !== id)
+      if (ex.qty === 1) {
+        setNotaAbierta(n => n === id ? null : n)
+        return prev.filter(c => c.id !== id)
+      }
       return prev.map(c => c.id === id ? { ...c, qty: c.qty - 1 } : c)
     })
+  }
+
+  const setNota = (id, nota) => {
+    setCart(prev => prev.map(c => c.id === id ? { ...c, nota } : c))
   }
 
   const subtotal = cart.reduce((s, c) => s + c.price * c.qty, 0)
@@ -34,10 +42,10 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
     if (!canConfirm) return
     onConfirm({
       tipo, mesa, cliente,
-      items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty })),
+      items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty, nota: c.nota || '' })),
       subtotal, total: subtotal,
       metodo_pago: pago,
-      notas,
+      notas: cart.filter(c => c.nota).map(c => `${c.name}: ${c.nota}`).join(' | '),
     })
   }
 
@@ -74,7 +82,7 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
             <div style={{
               background: C.accent, color: '#fff', borderRadius: 8,
               padding: '4px 10px', fontFamily: DISPLAY, fontSize: 14,
-            }}>{cart.length}</div>
+            }}>{cart.reduce((s, c) => s + c.qty, 0)}</div>
           )}
         </div>
       </div>
@@ -104,28 +112,77 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {menuItems.map(item => {
             const inCart = cart.find(c => c.id === item.id)
+            const notaVisible = notaAbierta === item.id && inCart
             return (
               <div key={item.id} style={{
                 background: inCart ? 'rgba(255,107,0,0.08)' : C.card,
                 border: `1px solid ${inCart ? C.accent + '44' : C.border}`,
                 borderRadius: 12, padding: '12px 14px',
-                display: 'flex', alignItems: 'center', gap: 12,
                 transition: 'all .15s',
               }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: 14 }}>{item.name}</div>
-                  <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginTop: 2, lineHeight: 1.3 }}>{item.desc}</div>
-                  <div style={{ fontFamily: DISPLAY, fontSize: 15, color: C.accent, marginTop: 4 }}>S/{item.price.toFixed(2)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14 }}>{item.name}</div>
+                    <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginTop: 2, lineHeight: 1.3 }}>{item.desc}</div>
+                    <div style={{ fontFamily: DISPLAY, fontSize: 15, color: C.accent, marginTop: 4 }}>S/{item.price.toFixed(2)}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    {inCart && (
+                      <>
+                        <button onClick={() => remove(item.id)} style={qtyBtn(C.border)}>−</button>
+                        <span style={{ fontFamily: DISPLAY, fontSize: 16, minWidth: 20, textAlign: 'center' }}>{inCart.qty}</span>
+                      </>
+                    )}
+                    <button onClick={() => add(item)} style={qtyBtn(C.accent, C.accent)}>+</button>
+                    {inCart && (
+                      <button onClick={() => setNotaAbierta(notaAbierta === item.id ? null : item.id)}
+                        style={{
+                          width: 32, height: 32, borderRadius: 8,
+                          border: `1px solid ${inCart.nota ? C.accent : C.border}`,
+                          background: inCart.nota ? C.accentDim : 'transparent',
+                          color: inCart.nota ? C.accent : C.muted,
+                          cursor: 'pointer', fontSize: 14,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>📝</button>
+                    )}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  {inCart && (
-                    <>
-                      <button onClick={() => remove(item.id)} style={qtyBtn(C.border)}>−</button>
-                      <span style={{ fontFamily: DISPLAY, fontSize: 16, minWidth: 20, textAlign: 'center' }}>{inCart.qty}</span>
-                    </>
-                  )}
-                  <button onClick={() => add(item)} style={qtyBtn(C.accent, C.accent)}>+</button>
-                </div>
+
+                {/* Campo de nota por producto */}
+                {notaVisible && (
+                  <div style={{ marginTop: 10 }}>
+                    <input
+                      autoFocus
+                      placeholder="Ej: mayo, ketchup, partido en 2, sin tomate..."
+                      value={inCart.nota || ''}
+                      onChange={e => setNota(item.id, e.target.value)}
+                      style={{
+                        width: '100%', background: '#1a1a1a',
+                        border: `1px solid ${C.accent}66`,
+                        borderRadius: 8, padding: '8px 12px',
+                        color: C.text, fontFamily: FONT, fontWeight: 600, fontSize: 13,
+                        outline: 'none', boxSizing: 'border-box',
+                      }}
+                    />
+                    {inCart.nota && (
+                      <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginTop: 4, letterSpacing: 0.5 }}>
+                        ✓ Nota guardada
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Nota guardada visible aunque esté cerrada */}
+                {!notaVisible && inCart?.nota && (
+                  <div style={{
+                    marginTop: 8, padding: '5px 10px',
+                    background: C.accentDim, borderRadius: 6,
+                    fontSize: 11, color: C.accent, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}>
+                    📝 {inCart.nota}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -139,20 +196,27 @@ export default function Pedido({ tipo, mesa, cliente, onConfirm, onBack }) {
       }}>
         {/* Cart summary */}
         {cart.length > 0 && (
-          <div style={{ marginBottom: 10, maxHeight: 80, overflowY: 'auto' }}>
+          <div style={{ marginBottom: 10, maxHeight: 90, overflowY: 'auto' }}>
             {cart.map(c => (
-              <div key={c.id} style={{
-                display: 'flex', justifyContent: 'space-between',
-                fontSize: 12, fontWeight: 700, padding: '2px 0', color: C.muted,
-              }}>
-                <span><span style={{ color: C.accent }}>{c.qty}×</span> {c.name}</span>
-                <span style={{ color: C.text }}>S/{(c.price * c.qty).toFixed(2)}</span>
+              <div key={c.id} style={{ padding: '2px 0' }}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  fontSize: 12, fontWeight: 700, color: C.muted,
+                }}>
+                  <span><span style={{ color: C.accent }}>{c.qty}×</span> {c.name}</span>
+                  <span style={{ color: C.text }}>S/{(c.price * c.qty).toFixed(2)}</span>
+                </div>
+                {c.nota && (
+                  <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, paddingLeft: 16 }}>
+                    📝 {c.nota}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        {/* Subtotal */}
+        {/* Total */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
           <span style={{ fontWeight: 700, fontSize: 13, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total</span>
           <span style={{ fontFamily: DISPLAY, fontSize: 20, color: cart.length ? C.text : C.dim }}>
@@ -197,7 +261,7 @@ function qtyBtn(borderColor, bg = 'transparent') {
     width: 32, height: 32, borderRadius: 8,
     border: `1px solid ${borderColor}`,
     background: bg === 'transparent' ? 'transparent' : bg,
-    color: bg !== 'transparent' ? '#fff' : '#fff',
+    color: '#fff',
     fontSize: 18, cursor: 'pointer', fontWeight: 800,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   }

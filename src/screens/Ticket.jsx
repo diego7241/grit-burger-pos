@@ -40,7 +40,10 @@ export default function Ticket({ pedido, onVolver, onNuevoPedido }) {
       pedido.tipo === 'llevar' ? `🛵 PARA LLEVAR${pedido.cliente ? ` — ${pedido.cliente}` : ''}` :
       `📱 WHATSAPP${pedido.cliente ? ` — ${pedido.cliente}` : ''}`
 
-    const items = pedido.items.map(i => `  ${i.qty}× ${i.name} — S/${(i.price * i.qty).toFixed(2)}`).join('\n')
+    const items = pedido.items.map(i => {
+      const linea = `  ${i.qty}× ${i.name} — S/${(i.price * i.qty).toFixed(2)}`
+      return i.nota ? `${linea}\n     📝 ${i.nota}` : linea
+    }).join('\n')
     const pago = pedido.metodo_pago.toUpperCase()
     const hora = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
 
@@ -120,9 +123,16 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
               {'CANT  PRODUCTO              IMPORTE'}
             </div>
             {pedido.items.map((item, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4, fontWeight: 700 }}>
-                <span>{item.qty}× {item.name}</span>
-                <span>S/{(item.price * item.qty).toFixed(2)}</span>
+              <div key={i} style={{ marginBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700 }}>
+                  <span>{item.qty}× {item.name}</span>
+                  <span>S/{(item.price * item.qty).toFixed(2)}</span>
+                </div>
+                {item.nota && (
+                  <div style={{ fontSize: 10, color: '#FF6B00', paddingLeft: 16, marginTop: 2, fontWeight: 600 }}>
+                    📝 {item.nota}
+                  </div>
+                )}
               </div>
             ))}
           </div>
