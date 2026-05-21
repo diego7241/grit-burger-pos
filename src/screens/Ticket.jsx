@@ -134,7 +134,9 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
   )
 
   const tituloLabel = pedido.tipo === 'mesa' ? `Mesa ${pedido.mesa}` :
-    pedido.tipo === 'llevar' ? 'Para llevar' : 'WhatsApp'
+    pedido.tipo === 'llevar'
+      ? (pedido.cliente ? `Llevar · ${pedido.cliente}` : 'Para llevar')
+      : (pedido.cliente ? `WA · ${pedido.cliente}` : 'WhatsApp')
 
   return (
     <div style={{

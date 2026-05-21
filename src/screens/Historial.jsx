@@ -1,17 +1,27 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { C, FONT, DISPLAY } from '../lib/theme'
+import { C, FONT, DISPLAY, WHATSAPP_COCINA } from '../lib/theme'
 
 const PAGO_COLORS = { yape: C.yape, plin: C.plin, tarjeta: '#2563eb', efectivo: '#16a34a' }
 const PAGO_LABELS = { yape: 'Yape', plin: 'Plin', tarjeta: 'Tarjeta', efectivo: 'Efectivo' }
 const FILTROS = ['todos', 'mesa', 'llevar', 'whatsapp']
 
-function inicioHoyLima() {
-  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })
-  return `${hoy}T05:00:00.000Z`
+function fechaLimaHoy() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })
 }
 
+function addDias(fecha, n) {
+  const [y, m, d] = fecha.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + n))
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`
+}
+
+function inicioDia(fecha) { return `${fecha}T05:00:00.000Z` }
+function finDia(fecha) { return `${addDias(fecha, 1)}T05:00:00.000Z` }
+
 export default function Historial({ onBack }) {
+  const hoy = fechaLimaHoy()
+  const [fecha, setFecha] = useState(hoy)
   const [pedidos, setPedidos] = useState([])
   const [filtro, setFiltro] = useState('todos')
   const [loading, setLoading] = useState(true)
@@ -21,7 +31,17 @@ export default function Historial({ onBack }) {
   const [confirmCobrar, setConfirmCobrar] = useState(null)
   const [cobrando, setCobrando] = useState(false)
 
-  useEffect(() => { cargar() }, [])
+  const esHoy = fecha === hoy
+  const ayer = addDias(hoy, -1)
+
+  const labelFecha = esHoy ? 'Hoy' :
+    fecha === ayer ? 'Ayer' :
+    new Date(`${fecha}T12:00:00Z`).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  const labelFechaLargo = new Date(`${fecha}T12:00:00Z`)
+    .toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  useEffect(() => { cargar() }, [fecha])
 
   const cargar = async () => {
     setLoading(true)
@@ -29,7 +49,8 @@ export default function Historial({ onBack }) {
     const { data, error: err } = await supabase
       .from('pedidos')
       .select('*')
-      .gte('created_at', inicioHoyLima())
+      .gte('created_at', inicioDia(fecha))
+      .lt('created_at', finDia(fecha))
       .order('created_at', { ascending: false })
     if (err) setError('No se pudo cargar el historial. Verifica tu conexión.')
     else if (data) setPedidos(data)
@@ -40,9 +61,7 @@ export default function Historial({ onBack }) {
     if (!confirmCobrar) return
     setCobrando(true)
     const { error: err } = await supabase
-      .from('pedidos')
-      .update({ estado: 'entregado' })
-      .eq('id', confirmCobrar.id)
+      .from('pedidos').update({ estado: 'entregado' }).eq('id', confirmCobrar.id)
     setCobrando(false)
     setConfirmCobrar(null)
     if (!err) cargar()
@@ -52,19 +71,40 @@ export default function Historial({ onBack }) {
     if (!confirmCancelar) return
     setCancelando(true)
     const { error: err } = await supabase
-      .from('pedidos')
-      .update({ estado: 'cancelado' })
-      .eq('id', confirmCancelar.id)
+      .from('pedidos').update({ estado: 'cancelado' }).eq('id', confirmCancelar.id)
     setCancelando(false)
     setConfirmCancelar(null)
     if (!err) cargar()
   }
 
+  const reenviarWhatsApp = (p) => {
+    const tipoBase = p.tipo === 'mesa' ? `🍽 MESA ${p.mesa}` :
+      p.tipo === 'llevar' ? `🛵 PARA LLEVAR${p.cliente ? ` — ${p.cliente}` : ''}` :
+      `📱 WHATSAPP${p.cliente ? ` — ${p.cliente}` : ''}`
+
+    const items = (p.items || []).map(i => {
+      const linea = `  ${i.qty}× ${i.name} — S/${(i.price * i.qty).toFixed(2)}`
+      return i.nota ? `${linea}\n     📝 ${i.nota}` : linea
+    }).join('\n')
+
+    const hora = new Date(p.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+
+    const msg = `🔄 *REENVÍO — GRIT BURGER POS*
+*${tipoBase}*
+Ticket #${p.numero} · ${hora}
+
+${items}
+
+*TOTAL: S/${Number(p.total).toFixed(2)}*
+Pago: ${p.metodo_pago?.toUpperCase() || ''}${p.notas ? `\n\n📝 Nota: ${p.notas}` : ''}`
+
+    window.open(`https://wa.me/${WHATSAPP_COCINA}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
   const pedidosActivos = pedidos.filter(p => p.estado !== 'cancelado')
   const filtrados = filtro === 'todos' ? pedidos : pedidos.filter(p => p.tipo === filtro)
-  const totalHoy = pedidosActivos.reduce((s, p) => s + Number(p.total), 0)
+  const totalDia = pedidosActivos.reduce((s, p) => s + Number(p.total), 0)
 
-  // Cierre de caja por método de pago
   const cierreCaja = ['efectivo', 'yape', 'plin', 'tarjeta'].map(m => ({
     metodo: m,
     monto: pedidosActivos.filter(p => p.metodo_pago === m).reduce((s, p) => s + Number(p.total), 0),
@@ -79,28 +119,64 @@ export default function Historial({ onBack }) {
 
   return (
     <div style={{ width: '100%', minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT, display: 'flex', flexDirection: 'column' }}>
+
       {/* Header */}
       <div style={{ padding: '54px 18px 14px', borderBottom: `1px solid ${C.border}`, background: C.card }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+
+        {/* Título + refresh */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <button onClick={onBack} style={{
             width: 38, height: 38, borderRadius: 10, background: C.bg,
             border: `1px solid ${C.border}`, color: C.text, cursor: 'pointer', fontSize: 20,
           }}>‹</button>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 10, color: C.muted, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase' }}>
-              {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })}
+              Historial
             </div>
-            <div style={{ fontFamily: DISPLAY, fontSize: 22, textTransform: 'uppercase', letterSpacing: -0.3 }}>Historial del día</div>
+            <div style={{ fontFamily: DISPLAY, fontSize: 22, textTransform: 'uppercase', letterSpacing: -0.3 }}>
+              {labelFecha}
+            </div>
           </div>
           <button onClick={cargar} style={{ background: 'transparent', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 18 }}>↻</button>
+        </div>
+
+        {/* Navegación de fecha */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <button onClick={() => setFecha(f => addDias(f, -1))} style={{
+            width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+            background: C.bg, border: `1px solid ${C.border}`,
+            color: C.text, cursor: 'pointer', fontSize: 20,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>‹</button>
+
+          <div style={{
+            flex: 1, background: C.bg, border: `1px solid ${C.border}`,
+            borderRadius: 10, padding: '8px 12px', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 12, color: C.text, fontWeight: 700, textTransform: 'capitalize' }}>
+              {labelFechaLargo}
+            </div>
+            <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, marginTop: 1 }}>{fecha}</div>
+          </div>
+
+          <button
+            onClick={() => setFecha(f => addDias(f, 1))}
+            disabled={esHoy}
+            style={{
+              width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+              background: C.bg, border: `1px solid ${esHoy ? 'transparent' : C.border}`,
+              color: esHoy ? C.dim : C.text,
+              cursor: esHoy ? 'default' : 'pointer', fontSize: 20,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>›</button>
         </div>
 
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 }}>
           {[
             { label: 'Pedidos', value: pedidosActivos.length },
-            { label: 'Total', value: `S/${totalHoy.toFixed(0)}` },
-            { label: 'Promedio', value: pedidosActivos.length ? `S/${(totalHoy / pedidosActivos.length).toFixed(0)}` : 'S/0' },
+            { label: 'Total', value: `S/${totalDia.toFixed(0)}` },
+            { label: 'Promedio', value: pedidosActivos.length ? `S/${(totalDia / pedidosActivos.length).toFixed(0)}` : 'S/0' },
           ].map(s => (
             <div key={s.label} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
               <div style={{ fontFamily: DISPLAY, fontSize: 18, color: C.accent }}>{s.value}</div>
@@ -118,8 +194,7 @@ export default function Historial({ onBack }) {
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(cierreCaja.length, 2)}, 1fr)`, gap: 6 }}>
               {cierreCaja.map(({ metodo, monto, count }) => (
                 <div key={metodo} style={{
-                  background: C.bg,
-                  border: `1px solid ${PAGO_COLORS[metodo]}33`,
+                  background: C.bg, border: `1px solid ${PAGO_COLORS[metodo]}33`,
                   borderRadius: 10, padding: '8px 12px',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}>
@@ -131,9 +206,7 @@ export default function Historial({ onBack }) {
                       {count} {count === 1 ? 'pedido' : 'pedidos'}
                     </div>
                   </div>
-                  <div style={{ fontFamily: DISPLAY, fontSize: 16, color: C.text }}>
-                    S/{monto.toFixed(0)}
-                  </div>
+                  <div style={{ fontFamily: DISPLAY, fontSize: 16, color: C.text }}>S/{monto.toFixed(0)}</div>
                 </div>
               ))}
             </div>
@@ -175,11 +248,14 @@ export default function Historial({ onBack }) {
           <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
             <div style={{ fontSize: 36, opacity: 0.4 }}>📋</div>
             <div style={{ fontFamily: DISPLAY, fontSize: 16, marginTop: 12, textTransform: 'uppercase' }}>Sin pedidos</div>
+            <div style={{ fontSize: 12, color: C.dim, marginTop: 6, fontWeight: 600 }}>{labelFechaLargo}</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {filtrados.map(p => {
               const cancelado = p.estado === 'cancelado'
+              const cobrado = p.estado === 'entregado'
+              const esLlevarWA = p.tipo === 'llevar' || p.tipo === 'whatsapp'
               return (
                 <div key={p.id} style={{
                   background: cancelado ? 'rgba(239,68,68,0.04)' : C.card,
@@ -194,11 +270,13 @@ export default function Historial({ onBack }) {
                       </div>
                       <div style={{ fontSize: 10, color: C.dim, fontWeight: 700, marginTop: 2 }}>
                         {new Date(p.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
-                        {p.estado === 'entregado' && <span style={{ marginLeft: 6, color: C.green }}>· cobrado</span>}
+                        {cobrado && <span style={{ marginLeft: 6, color: C.green }}>· cobrado</span>}
                         {cancelado && <span style={{ marginLeft: 6, color: '#ef4444' }}>· cancelado</span>}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                      {/* Total + método */}
                       <div style={{ textAlign: 'right' }}>
                         <div style={{
                           fontFamily: DISPLAY, fontSize: 16,
@@ -217,34 +295,45 @@ export default function Historial({ onBack }) {
                           }}>{p.metodo_pago}</span>
                         )}
                       </div>
-                      {!cancelado && p.estado !== 'entregado' && (p.tipo === 'llevar' || p.tipo === 'whatsapp') && (
-                        <button
-                          onClick={() => setConfirmCobrar(p)}
-                          style={{
-                            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-                            background: 'rgba(34,197,94,0.1)',
-                            border: '1px solid rgba(34,197,94,0.25)',
-                            color: C.green, fontSize: 14, fontWeight: 800,
-                            cursor: 'pointer', display: 'flex',
-                            alignItems: 'center', justifyContent: 'center',
-                          }}
-                        >✓</button>
-                      )}
+
+                      {/* Reenviar WA */}
                       {!cancelado && (
-                        <button
-                          onClick={() => setConfirmCancelar(p)}
-                          style={{
-                            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-                            background: 'rgba(239,68,68,0.1)',
-                            border: '1px solid rgba(239,68,68,0.2)',
-                            color: '#ef4444', fontSize: 14, fontWeight: 800,
-                            cursor: 'pointer', display: 'flex',
-                            alignItems: 'center', justifyContent: 'center',
-                          }}
-                        >✕</button>
+                        <button onClick={() => reenviarWhatsApp(p)} title="Reenviar a cocina" style={{
+                          width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                          background: 'rgba(34,197,94,0.08)',
+                          border: '1px solid rgba(34,197,94,0.2)',
+                          color: '#22c55e', fontSize: 13,
+                          cursor: 'pointer', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center',
+                        }}>📲</button>
+                      )}
+
+                      {/* Cobrar llevar/WA */}
+                      {!cancelado && !cobrado && esLlevarWA && (
+                        <button onClick={() => setConfirmCobrar(p)} title="Marcar cobrado" style={{
+                          width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                          background: 'rgba(34,197,94,0.1)',
+                          border: '1px solid rgba(34,197,94,0.25)',
+                          color: C.green, fontSize: 14, fontWeight: 800,
+                          cursor: 'pointer', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center',
+                        }}>✓</button>
+                      )}
+
+                      {/* Cancelar */}
+                      {!cancelado && (
+                        <button onClick={() => setConfirmCancelar(p)} title="Cancelar pedido" style={{
+                          width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                          background: 'rgba(239,68,68,0.1)',
+                          border: '1px solid rgba(239,68,68,0.2)',
+                          color: '#ef4444', fontSize: 14, fontWeight: 800,
+                          cursor: 'pointer', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center',
+                        }}>✕</button>
                       )}
                     </div>
                   </div>
+
                   <div style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>
                     {Array.isArray(p.items) ? p.items.map(i => `${i.qty}× ${i.name}`).join(', ') : ''}
                   </div>
