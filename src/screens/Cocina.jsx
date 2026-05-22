@@ -89,12 +89,7 @@ export default function Cocina() {
         flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            color: ACCENT, fontFamily: DISPLAY, fontSize: 18,
-            textTransform: 'uppercase', letterSpacing: -0.3,
-          }}>
-            Grit Burger
-          </div>
+          <img src="/logo.jpg" alt="Grit Burger" style={{ height: 30, borderRadius: 6 }} />
           <div style={{
             background: '#222', border: '1px solid #333',
             borderRadius: 6, padding: '2px 10px',

@@ -109,12 +109,10 @@ export default function App() {
 
   if (loading) return (
     <div style={{
-      width: '100vw', height: '100vh', background: '#1a1a1a',
+      width: '100vw', height: '100vh', background: '#111',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <div style={{ color: '#FF6B00', fontFamily: 'Archivo Black, sans-serif', fontSize: 24, textTransform: 'uppercase', letterSpacing: -0.5 }}>
-        Grit Burger
-      </div>
+      <img src="/logo.jpg" alt="Grit Burger" style={{ width: 200, borderRadius: 12 }} />
     </div>
   )
 

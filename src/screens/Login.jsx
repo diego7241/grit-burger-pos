@@ -2,27 +2,6 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { C, FONT, DISPLAY } from '../lib/theme'
 
-function BurgerMark({ size = 64 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" style={{ display: 'block' }}>
-      <defs>
-        <linearGradient id="bun" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#FF8A3D" />
-          <stop offset="1" stopColor="#FF6B00" />
-        </linearGradient>
-      </defs>
-      <path d="M8 26 Q8 10 32 10 Q56 10 56 26 Z" fill="url(#bun)" />
-      <circle cx="22" cy="18" r="1.6" fill="#fff" opacity="0.85" />
-      <circle cx="32" cy="14" r="1.6" fill="#fff" opacity="0.85" />
-      <circle cx="42" cy="18" r="1.6" fill="#fff" opacity="0.85" />
-      <path d="M6 28 L58 28 L56 33 Q50 31 46 33 Q40 31 36 33 Q30 31 26 33 Q20 31 16 33 Q10 31 8 33 Z" fill="#22c55e" />
-      <rect x="6" y="34" width="52" height="9" rx="2" fill="#3a1f12" />
-      <rect x="6" y="34" width="52" height="2" rx="1" fill="#5a2f1c" />
-      <path d="M8 44 L56 44 Q56 56 32 56 Q8 56 8 44 Z" fill="url(#bun)" />
-    </svg>
-  )
-}
-
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -57,23 +36,18 @@ export default function Login({ onLogin }) {
       }} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <img
+          src="/logo.jpg"
+          alt="Grit Burger"
+          style={{
+            width: '100%', maxWidth: 280,
+            borderRadius: 16,
+            boxShadow: `0 20px 60px rgba(255,107,0,0.2)`,
+            marginBottom: 28,
+          }}
+        />
         <div style={{
-          width: 96, height: 96, borderRadius: 24,
-          background: '#0a0a0a', border: `1px solid ${C.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: 22,
-          boxShadow: `0 20px 60px rgba(255,107,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)`,
-        }}>
-          <BurgerMark size={64} />
-        </div>
-        <div style={{
-          fontFamily: DISPLAY, fontSize: 40, lineHeight: 0.95, letterSpacing: -1,
-          textTransform: 'uppercase', textAlign: 'center',
-        }}>
-          Grit<br />Burger
-        </div>
-        <div style={{
-          marginTop: 14, display: 'flex', alignItems: 'center', gap: 10,
+          display: 'flex', alignItems: 'center', gap: 10,
           color: C.muted, fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', fontWeight: 700,
         }}>
           <span style={{ width: 18, height: 1, background: C.accent }} />

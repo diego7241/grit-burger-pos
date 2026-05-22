@@ -95,9 +95,8 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
       <div style={{ padding: '54px 18px 16px', borderBottom: `1px solid ${C.border}`, background: C.card }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: DISPLAY, fontSize: 16, color: C.accent, textTransform: 'uppercase', letterSpacing: 1 }}>Grit Burger</span>
-              <span style={{ fontSize: 10, color: C.muted, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>POS</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+              <img src="/logo.jpg" alt="Grit Burger" style={{ height: 32, borderRadius: 6 }} />
             </div>
             <div style={{ fontFamily: DISPLAY, fontSize: 32, letterSpacing: -1, lineHeight: 1, marginTop: 2 }}>
               {hora}<span style={{ fontSize: 18, color: C.muted, fontVariantNumeric: 'tabular-nums' }}>:{segundos}</span>
