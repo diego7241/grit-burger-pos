@@ -25,9 +25,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
   }
 
   const add = (item) => {
-    // Find last line of this item that has no note → increment it
-    // If all lines have notes (or no lines) → create new line
-    const linesForItem = cart.filter(c => c.id === item.id)
+    const linesForItem = cart.filter(c => c.id === item.id && !c.isComplemento)
     const lastNoNote = [...linesForItem].reverse().find(c => !c.nota)
     if (lastNoNote) {
       setCart(prev => prev.map(c => c.lineId === lastNoNote.lineId ? { ...c, qty: c.qty + 1 } : c))
@@ -160,7 +158,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 18px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {menuItems.map(item => {
-            const linesForItem = cart.filter(c => c.id === item.id)
+            const linesForItem = cart.filter(c => c.id === item.id && !c.isComplemento)
             const totalQty = linesForItem.reduce((s, c) => s + c.qty, 0)
             const hasAny = linesForItem.length > 0
             const lastLine = linesForItem[linesForItem.length - 1]
