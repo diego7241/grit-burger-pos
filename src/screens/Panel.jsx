@@ -17,6 +17,8 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
   const [cobrandoId, setCobrandoId] = useState(null)
   const [errorCobro, setErrorCobro] = useState(null)
   const [pagoModal, setPagoModal] = useState(null)
+  const [confirmCancel, setConfirmCancel] = useState(null) // { label, pedidoId }
+  const [cancelando, setCancelando] = useState(false)
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -57,6 +59,20 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [cargarPedidosHoy])
+
+  const cancelarPedido = async () => {
+    if (!confirmCancel) return
+    setCancelando(true)
+    const { error } = await supabase
+      .from('pedidos')
+      .update({ estado: 'cancelado' })
+      .eq('id', confirmCancel.pedidoId)
+    setCancelando(false)
+    if (!error) {
+      setConfirmCancel(null)
+      cargarPedidosHoy()
+    }
+  }
 
   const cobrarMesa = async () => {
     if (!confirmCobro || !pagoModal) return
@@ -210,20 +226,36 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
                   </div>
                 )}
                 {ocupada && (
-                  <button
-                    onClick={() => { setConfirmCobro({ mesa: n, pedido: ocupada }); setPagoModal(ocupada.metodo_pago || null) }}
-                    style={{
-                      width: '100%', padding: '7px 12px',
-                      background: ocupada.listo ? 'rgba(34,197,94,0.2)' : 'rgba(34,197,94,0.1)',
-                      border: `1px solid ${color}44`,
-                      borderTop: 'none',
-                      borderRadius: '0 0 14px 14px',
-                      color: C.green, fontFamily: FONT, fontWeight: 800, fontSize: 10,
-                      cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.5,
-                    }}
-                  >
-                    ✓ Cobrar
-                  </button>
+                  <div style={{ display: 'flex', borderTop: 'none' }}>
+                    <button
+                      onClick={() => { setConfirmCobro({ mesa: n, pedido: ocupada }); setPagoModal(ocupada.metodo_pago || null) }}
+                      style={{
+                        flex: 1, padding: '7px 12px',
+                        background: ocupada.listo ? 'rgba(34,197,94,0.2)' : 'rgba(34,197,94,0.1)',
+                        border: `1px solid ${color}44`,
+                        borderTop: 'none', borderRight: 'none',
+                        borderRadius: '0 0 0 14px',
+                        color: C.green, fontFamily: FONT, fontWeight: 800, fontSize: 10,
+                        cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.5,
+                      }}
+                    >
+                      ✓ Cobrar
+                    </button>
+                    <button
+                      onClick={() => setConfirmCancel({ label: `Mesa ${n}`, pedidoId: ocupada.id })}
+                      style={{
+                        padding: '7px 10px',
+                        background: 'rgba(239,68,68,0.08)',
+                        border: `1px solid ${color}44`,
+                        borderTop: 'none', borderLeft: `1px solid ${color}22`,
+                        borderRadius: '0 0 14px 0',
+                        color: '#ef4444', fontFamily: FONT, fontWeight: 800, fontSize: 12,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 )}
               </div>
             )
@@ -260,23 +292,35 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
                         {totalItems} {totalItems === 1 ? 'ítem' : 'ítems'} · #{p.numero}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      {p.listo ? (
-                        <div style={{
-                          background: '#22c55e', color: '#fff',
-                          borderRadius: 6, padding: '3px 8px',
-                          fontSize: 11, fontWeight: 900,
-                          textTransform: 'uppercase', letterSpacing: 0.5,
-                          marginBottom: 3,
-                        }}>✓ Listo</div>
-                      ) : (
-                        <div style={{ fontFamily: DISPLAY, fontSize: 16, color, letterSpacing: -0.3 }}>
-                          {tiempoDesde(p.created_at)}
+                    <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div>
+                        {p.listo ? (
+                          <div style={{
+                            background: '#22c55e', color: '#fff',
+                            borderRadius: 6, padding: '3px 8px',
+                            fontSize: 11, fontWeight: 900,
+                            textTransform: 'uppercase', letterSpacing: 0.5,
+                            marginBottom: 3,
+                          }}>✓ Listo</div>
+                        ) : (
+                          <div style={{ fontFamily: DISPLAY, fontSize: 16, color, letterSpacing: -0.3 }}>
+                            {tiempoDesde(p.created_at)}
+                          </div>
+                        )}
+                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>
+                          S/{Number(p.total).toFixed(0)}
                         </div>
-                      )}
-                      <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>
-                        S/{Number(p.total).toFixed(0)}
                       </div>
+                      <button
+                        onClick={() => setConfirmCancel({ label: p.cliente || (p.tipo === 'llevar' ? 'Para llevar' : 'WhatsApp'), pedidoId: p.id })}
+                        style={{
+                          width: 28, height: 28, borderRadius: 8,
+                          background: 'rgba(239,68,68,0.1)',
+                          border: '1px solid rgba(239,68,68,0.2)',
+                          color: '#ef4444', fontWeight: 900, fontSize: 13,
+                          cursor: 'pointer', flexShrink: 0,
+                        }}
+                      >✕</button>
                     </div>
                   </div>
                 )
@@ -341,6 +385,59 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
           cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase',
         }}>Salir ›</button>
       </div>
+
+      {/* Modal confirmación cancelar */}
+      {confirmCancel && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+          display: 'flex', alignItems: 'flex-end', zIndex: 200, fontFamily: FONT,
+        }}>
+          <div style={{
+            width: '100%', background: C.card,
+            borderRadius: '20px 20px 0 0', padding: '24px 20px 44px',
+            borderTop: '1px solid rgba(239,68,68,0.3)',
+          }}>
+            <div style={{ fontSize: 10, color: '#ef4444', fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
+              Cancelar pedido
+            </div>
+            <div style={{ fontFamily: DISPLAY, fontSize: 22, textTransform: 'uppercase', letterSpacing: -0.3, marginBottom: 8 }}>
+              {confirmCancel.label}
+            </div>
+            <div style={{ fontSize: 13, color: C.muted, fontWeight: 600, marginBottom: 24 }}>
+              El pedido se marcará como cancelado. Esta acción no se puede deshacer.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setConfirmCancel(null)}
+                disabled={cancelando}
+                style={{
+                  flex: 1, padding: '14px', borderRadius: 12,
+                  border: `1px solid ${C.border}`, background: 'transparent',
+                  color: C.muted, fontFamily: FONT, fontWeight: 700, fontSize: 14,
+                  cursor: 'pointer', textTransform: 'uppercase',
+                }}
+              >
+                Volver
+              </button>
+              <button
+                onClick={cancelarPedido}
+                disabled={cancelando}
+                style={{
+                  flex: 2, padding: '14px', borderRadius: 12,
+                  border: 0, background: cancelando ? '#333' : '#ef4444',
+                  color: cancelando ? '#777' : '#fff',
+                  fontFamily: FONT, fontWeight: 800, fontSize: 14,
+                  cursor: cancelando ? 'not-allowed' : 'pointer',
+                  textTransform: 'uppercase', letterSpacing: 0.3,
+                  boxShadow: cancelando ? 'none' : '0 8px 24px rgba(239,68,68,0.35)',
+                }}
+              >
+                {cancelando ? 'Cancelando...' : '✕ Cancelar pedido'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal confirmación cobro */}
       {confirmCobro && (
