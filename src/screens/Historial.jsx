@@ -77,6 +77,99 @@ export default function Historial({ onBack }) {
     if (!err) cargar()
   }
 
+  const generarReporte = () => {
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<title>Reporte ${labelFechaLargo} — Grit Burger</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,sans-serif;color:#1a1a1a;padding:32px;font-size:13px;max-width:780px;margin:0 auto}
+  h1{font-size:26px;font-weight:900;text-transform:uppercase;letter-spacing:-0.5px}
+  .accent{color:#FF6B00}
+  .section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#999;border-bottom:2px solid #eee;padding-bottom:6px;margin:24px 0 12px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .stat{border:1px solid #eee;border-radius:8px;padding:14px;text-align:center}
+  .stat-val{font-size:22px;font-weight:900;color:#FF6B00}
+  .stat-lbl{font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+  .caja{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .metodo{border:1px solid #eee;border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+  .metodo-lbl{font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.5px}
+  .metodo-cnt{font-size:10px;color:#aaa;margin-top:2px}
+  .metodo-monto{font-size:18px;font-weight:900}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#aaa;border-bottom:2px solid #eee;padding:6px 8px}
+  td{padding:9px 8px;border-bottom:1px solid #f5f5f5;font-size:12px;vertical-align:top}
+  tr.cancelado td{opacity:0.35;text-decoration:line-through}
+  .badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+  .footer{margin-top:40px;padding-top:16px;border-top:1px solid #eee;text-align:center;font-size:10px;color:#ccc}
+  @media print{@page{margin:20mm}body{padding:0}}
+</style>
+</head>
+<body>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px">
+  <div>
+    <h1>Grit Burger <span class="accent">POS</span></h1>
+    <div style="color:#666;margin-top:6px;font-size:14px;font-weight:600;text-transform:capitalize">${labelFechaLargo}</div>
+  </div>
+  <div style="text-align:right;font-size:11px;color:#aaa;line-height:1.6">
+    Generado: ${new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}<br/>Lima, Perú
+  </div>
+</div>
+
+<div class="section-title">Resumen del día</div>
+<div class="stats">
+  <div class="stat"><div class="stat-val">${pedidosActivos.length}</div><div class="stat-lbl">Pedidos activos</div></div>
+  <div class="stat"><div class="stat-val">S/${totalDia.toFixed(2)}</div><div class="stat-lbl">Total vendido</div></div>
+  <div class="stat"><div class="stat-val">${pedidosActivos.length ? `S/${(totalDia/pedidosActivos.length).toFixed(2)}` : 'S/0'}</div><div class="stat-lbl">Ticket promedio</div></div>
+</div>
+
+${cierreCaja.length > 0 ? `
+<div class="section-title">Cierre de caja</div>
+<div class="caja">
+${cierreCaja.map(({metodo,monto,count}) => `
+  <div class="metodo">
+    <div>
+      <div class="metodo-lbl" style="color:${PAGO_COLORS[metodo]}">${PAGO_LABELS[metodo]}</div>
+      <div class="metodo-cnt">${count} ${count===1?'pedido':'pedidos'}</div>
+    </div>
+    <div class="metodo-monto">S/${monto.toFixed(2)}</div>
+  </div>`).join('')}
+</div>` : ''}
+
+<div class="section-title">Detalle de pedidos — ${pedidos.length} total</div>
+<table>
+  <thead>
+    <tr>
+      <th>#</th><th>Hora</th><th>Tipo</th><th>Productos</th><th>Pago</th><th style="text-align:right">Total</th><th>Estado</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${pedidos.map(p => `
+    <tr class="${p.estado==='cancelado'?'cancelado':''}">
+      <td style="font-weight:700">${p.numero}</td>
+      <td style="color:#888">${new Date(p.created_at).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}</td>
+      <td style="font-weight:700">${tipoLabel(p)}</td>
+      <td style="color:#666;max-width:220px">${(p.items||[]).map(i=>`${i.qty}× ${i.name}`).join(', ')}</td>
+      <td><span class="badge" style="background:${(PAGO_COLORS[p.metodo_pago]||'#888')}22;color:${PAGO_COLORS[p.metodo_pago]||'#888'}">${p.metodo_pago||''}</span></td>
+      <td style="text-align:right;font-weight:800">S/${Number(p.total).toFixed(2)}</td>
+      <td style="color:${p.estado==='cancelado'?'#ef4444':p.estado==='entregado'?'#16a34a':'#888'};font-weight:700">
+        ${p.estado==='cancelado'?'Cancelado':p.estado==='entregado'?'Cobrado':'Activo'}
+      </td>
+    </tr>`).join('')}
+  </tbody>
+</table>
+
+<div class="footer">Grit Burger POS · Lima, Perú · ${fecha} · gritburger.pe</div>
+<script>window.onload=()=>window.print()</script>
+</body>
+</html>`
+
+    const w = window.open('', '_blank')
+    if (w) { w.document.write(html); w.document.close() }
+  }
+
   const reenviarWhatsApp = (p) => {
     const tipoBase = p.tipo === 'mesa' ? `🍽 MESA ${p.mesa}` :
       p.tipo === 'llevar' ? `🛵 PARA LLEVAR${p.cliente ? ` — ${p.cliente}` : ''}` :
@@ -98,7 +191,7 @@ ${items}
 *TOTAL: S/${Number(p.total).toFixed(2)}*
 Pago: ${p.metodo_pago?.toUpperCase() || ''}${p.notas ? `\n\n📝 Nota: ${p.notas}` : ''}`
 
-    window.open(`https://wa.me/${WHATSAPP_COCINA}?text=${encodeURIComponent(msg)}`, '_blank')
+    window.location.href = `https://wa.me/${WHATSAPP_COCINA}?text=${encodeURIComponent(msg)}`
   }
 
   const pedidosActivos = pedidos.filter(p => p.estado !== 'cancelado')
@@ -138,6 +231,17 @@ Pago: ${p.metodo_pago?.toUpperCase() || ''}${p.notas ? `\n\n📝 Nota: ${p.notas
             </div>
           </div>
           <button onClick={cargar} style={{ background: 'transparent', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 18 }}>↻</button>
+          {!loading && pedidos.length > 0 && (
+            <button onClick={generarReporte} style={{
+              background: C.accent, border: 'none', color: '#fff',
+              borderRadius: 9, padding: '6px 12px',
+              fontFamily: FONT, fontWeight: 800, fontSize: 11,
+              cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.5,
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              📄 PDF
+            </button>
+          )}
         </div>
 
         {/* Navegación de fecha */}

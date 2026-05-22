@@ -6,11 +6,14 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
   const [cat, setCat] = useState('hamburguesas')
   const [cart, setCart] = useState(() =>
     pedidoExistente?.items
-      ? pedidoExistente.items.map(i => ({ ...i, nota: i.nota || '' }))
+      ? pedidoExistente.items.map((i, idx) => ({
+          ...i, nota: i.nota || '',
+          lineId: i.lineId || `${i.id}_${idx}_${Date.now()}`,
+        }))
       : []
   )
   const [pago, setPago] = useState(pedidoExistente?.metodo_pago || null)
-  const [notaAbierta, setNotaAbierta] = useState(null)
+  const [notaAbierta, setNotaAbierta] = useState(null) // lineId
   const [confirmSalir, setConfirmSalir] = useState(false)
 
   const esEdicion = !!pedidoExistente?.id
@@ -22,28 +25,52 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
   }
 
   const add = (item) => {
-    setCart(prev => {
-      const ex = prev.find(c => c.id === item.id)
-      if (ex) return prev.map(c => c.id === item.id ? { ...c, qty: c.qty + 1 } : c)
-      return [...prev, { ...item, qty: 1, nota: '' }]
-    })
-    setNotaAbierta(item.id)
+    // Find last line of this item that has no note → increment it
+    // If all lines have notes (or no lines) → create new line
+    const linesForItem = cart.filter(c => c.id === item.id)
+    const lastNoNote = [...linesForItem].reverse().find(c => !c.nota)
+    if (lastNoNote) {
+      setCart(prev => prev.map(c => c.lineId === lastNoNote.lineId ? { ...c, qty: c.qty + 1 } : c))
+      setNotaAbierta(lastNoNote.lineId)
+    } else {
+      const lineId = `${item.id}_${Date.now()}`
+      setCart(prev => [...prev, { ...item, qty: 1, nota: '', lineId }])
+      setNotaAbierta(lineId)
+    }
   }
 
-  const remove = (id) => {
+  const remove = (lineId) => {
     setCart(prev => {
-      const ex = prev.find(c => c.id === id)
+      const ex = prev.find(c => c.lineId === lineId)
       if (!ex) return prev
       if (ex.qty === 1) {
-        setNotaAbierta(n => n === id ? null : n)
-        return prev.filter(c => c.id !== id)
+        setNotaAbierta(n => n === lineId ? null : n)
+        return prev.filter(c => c.lineId !== lineId)
       }
-      return prev.map(c => c.id === id ? { ...c, qty: c.qty - 1 } : c)
+      return prev.map(c => c.lineId === lineId ? { ...c, qty: c.qty - 1 } : c)
     })
   }
 
-  const setNota = (id, nota) => {
-    setCart(prev => prev.map(c => c.id === id ? { ...c, nota } : c))
+  const setNota = (lineId, nota) => {
+    setCart(prev => prev.map(c => c.lineId === lineId ? { ...c, nota } : c))
+  }
+
+  const agregarComplemento = (comp, forLineId) => {
+    setCart(prev => {
+      const target = prev.find(c => c.lineId === forLineId)
+      if (!target) return prev
+      // Append extra name to note
+      const notaActual = target.nota || ''
+      const nuevoNombre = comp.name.toLowerCase()
+      const nuevaNota = notaActual ? `${notaActual}, ${nuevoNombre}` : nuevoNombre
+      const updated = prev.map(c => c.lineId === forLineId ? { ...c, nota: nuevaNota } : c)
+      // Insert price line right after the target item
+      const idx = updated.findIndex(c => c.lineId === forLineId)
+      const compLine = { ...comp, qty: 1, nota: '', lineId: `${comp.id}_${Date.now()}` }
+      const result = [...updated]
+      result.splice(idx + 1, 0, compLine)
+      return result
+    })
   }
 
   const total = cart.reduce((s, c) => s + c.price * c.qty, 0)
@@ -53,7 +80,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
     if (!canConfirm) return
     onConfirm({
       tipo, mesa, cliente,
-      items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty, nota: c.nota || '' })),
+      items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty, nota: c.nota || '', lineId: c.lineId })),
       subtotal: total, total,
       metodo_pago: pago,
       notas: cart.filter(c => c.nota).map(c => `${c.name}: ${c.nota}`).join(' | '),
@@ -122,12 +149,16 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 18px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {menuItems.map(item => {
-            const inCart = cart.find(c => c.id === item.id)
-            const notaVisible = notaAbierta === item.id && inCart
+            const linesForItem = cart.filter(c => c.id === item.id)
+            const totalQty = linesForItem.reduce((s, c) => s + c.qty, 0)
+            const hasAny = linesForItem.length > 0
+            const lastLine = linesForItem[linesForItem.length - 1]
+            const notaVisible = hasAny && notaAbierta === lastLine?.lineId
+
             return (
               <div key={item.id} style={{
-                background: inCart ? 'rgba(255,107,0,0.08)' : C.card,
-                border: `1px solid ${inCart ? C.accent + '44' : C.border}`,
+                background: hasAny ? 'rgba(255,107,0,0.08)' : C.card,
+                border: `1px solid ${hasAny ? C.accent + '44' : C.border}`,
                 borderRadius: 12, padding: '12px 14px', transition: 'all .15s',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -137,33 +168,36 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
                     <div style={{ fontFamily: DISPLAY, fontSize: 15, color: C.accent, marginTop: 4 }}>S/{item.price.toFixed(2)}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    {inCart && (
+                    {hasAny && (
                       <>
-                        <button onClick={() => remove(item.id)} style={qtyBtn(C.border)}>−</button>
-                        <span style={{ fontFamily: DISPLAY, fontSize: 16, minWidth: 20, textAlign: 'center' }}>{inCart.qty}</span>
+                        <button onClick={() => lastLine && remove(lastLine.lineId)} style={qtyBtn(C.border)}>−</button>
+                        <span style={{ fontFamily: DISPLAY, fontSize: 16, minWidth: 20, textAlign: 'center' }}>{totalQty}</span>
                       </>
                     )}
                     <button onClick={() => add(item)} style={qtyBtn(C.accent, C.accent)}>+</button>
-                    {inCart && (
-                      <button onClick={() => setNotaAbierta(notaAbierta === item.id ? null : item.id)} style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        border: `1px solid ${inCart.nota ? C.accent : C.border}`,
-                        background: inCart.nota ? C.accentDim : 'transparent',
-                        color: inCart.nota ? C.accent : C.muted,
-                        cursor: 'pointer', fontSize: 14,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>📝</button>
+                    {hasAny && (
+                      <button
+                        onClick={() => setNotaAbierta(notaAbierta === lastLine?.lineId ? null : lastLine?.lineId)}
+                        style={{
+                          width: 32, height: 32, borderRadius: 8,
+                          border: `1px solid ${lastLine?.nota ? C.accent : C.border}`,
+                          background: lastLine?.nota ? C.accentDim : 'transparent',
+                          color: lastLine?.nota ? C.accent : C.muted,
+                          cursor: 'pointer', fontSize: 14,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>📝</button>
                     )}
                   </div>
                 </div>
 
-                {notaVisible && (
+                {/* Nota de la última línea (editable) */}
+                {notaVisible && lastLine && (
                   <div style={{ marginTop: 10 }}>
                     <input
                       autoFocus
-                      placeholder="Ej: mayo, ketchup, partido en 2, sin tomate..."
-                      value={inCart.nota || ''}
-                      onChange={e => setNota(item.id, e.target.value)}
+                      placeholder="Ej: sin tomate, partido en 2..."
+                      value={lastLine.nota || ''}
+                      onChange={e => setNota(lastLine.lineId, e.target.value)}
                       style={{
                         width: '100%', background: '#1a1a1a',
                         border: `1px solid ${C.accent}66`, borderRadius: 8,
@@ -171,21 +205,55 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
                         fontWeight: 600, fontSize: 13, outline: 'none', boxSizing: 'border-box',
                       }}
                     />
-                    {inCart.nota && (
-                      <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginTop: 4, letterSpacing: 0.5 }}>
+                    {/* Chips de complementos */}
+                    <div style={{
+                      display: 'flex', gap: 6, overflowX: 'auto',
+                      marginTop: 8, paddingBottom: 2, scrollbarWidth: 'none',
+                    }}>
+                      {MENU.complementos.items.map(comp => (
+                        <button
+                          key={comp.id}
+                          onClick={() => agregarComplemento(comp, lastLine.lineId)}
+                          style={{
+                            flexShrink: 0, padding: '5px 10px', borderRadius: 8,
+                            background: C.bg, border: `1px solid ${C.border}`,
+                            color: C.muted, fontFamily: FONT, fontWeight: 700,
+                            fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
+                            display: 'flex', alignItems: 'center', gap: 5,
+                          }}
+                        >
+                          + {comp.name}
+                          <span style={{ color: C.accent, fontFamily: DISPLAY, fontSize: 11 }}>
+                            S/{comp.price % 1 === 0 ? comp.price : comp.price.toFixed(1)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    {lastLine.nota && (
+                      <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginTop: 6, letterSpacing: 0.5 }}>
                         ✓ Nota guardada
                       </div>
                     )}
                   </div>
                 )}
 
-                {!notaVisible && inCart?.nota && (
-                  <div style={{
-                    marginTop: 8, padding: '5px 10px', background: C.accentDim, borderRadius: 6,
-                    fontSize: 11, color: C.accent, fontWeight: 700,
-                    display: 'flex', alignItems: 'center', gap: 6,
-                  }}>
-                    📝 {inCart.nota}
+                {/* Notas de todas las líneas (lectura) */}
+                {!notaVisible && linesForItem.map(line =>
+                  line.nota ? (
+                    <div key={line.lineId} style={{
+                      marginTop: 8, padding: '5px 10px', background: C.accentDim, borderRadius: 6,
+                      fontSize: 11, color: C.accent, fontWeight: 700,
+                      display: 'flex', alignItems: 'center', gap: 6,
+                    }}>
+                      📝 {line.qty > 1 ? `${line.qty}×` : ''} {line.nota}
+                    </div>
+                  ) : null
+                )}
+
+                {/* Indicador de líneas múltiples */}
+                {linesForItem.length > 1 && (
+                  <div style={{ marginTop: 6, fontSize: 10, color: C.muted, fontWeight: 700, letterSpacing: 0.5 }}>
+                    {linesForItem.length} variantes · toca + para agregar otra
                   </div>
                 )}
               </div>
@@ -198,9 +266,9 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
       <div style={{ padding: '12px 18px 28px', borderTop: `1px solid ${C.border}`, background: C.card, flexShrink: 0 }}>
         {/* Resumen carrito */}
         {cart.length > 0 && (
-          <div style={{ marginBottom: 10, maxHeight: 90, overflowY: 'auto' }}>
+          <div style={{ marginBottom: 10, maxHeight: 100, overflowY: 'auto' }}>
             {cart.map(c => (
-              <div key={c.id} style={{ padding: '2px 0' }}>
+              <div key={c.lineId} style={{ padding: '2px 0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: C.muted }}>
                   <span><span style={{ color: C.accent }}>{c.qty}×</span> {c.name}</span>
                   <span style={{ color: C.text }}>S/{(c.price * c.qty).toFixed(2)}</span>
@@ -215,7 +283,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
           </div>
         )}
 
-        {/* Totales */}
+        {/* Total */}
         <div style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ fontWeight: 700, fontSize: 13, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>Total</span>

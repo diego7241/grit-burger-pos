@@ -91,8 +91,7 @@ ${totales}
 Pago: ${pago}
 ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
 
-    const url = `https://wa.me/${WHATSAPP_COCINA}?text=${encodeURIComponent(msg)}`
-    window.open(url, '_blank')
+    window.location.href = `https://wa.me/${WHATSAPP_COCINA}?text=${encodeURIComponent(msg)}`
   }
 
   // Calculadora de vuelto
