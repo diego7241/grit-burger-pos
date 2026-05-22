@@ -78,6 +78,9 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
   const totalHoy = pedidosActivos.reduce((s, p) => s + Number(p.total), 0)
   const countLlevar = pedidosHoy.filter(p => p.tipo === 'llevar' && p.estado === 'confirmado').length
   const countWA = pedidosHoy.filter(p => p.tipo === 'whatsapp' && p.estado === 'confirmado').length
+  const pendientesLlevarWA = pedidosHoy
+    .filter(p => (p.tipo === 'llevar' || p.tipo === 'whatsapp') && p.estado === 'confirmado')
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
   const hora = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
   const segundos = now.getSeconds().toString().padStart(2, '0')
   const fecha = now.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -143,41 +146,49 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
           {mesas.map(n => {
             const ocupada = mesasOcupadas[n]
             const totalItems = ocupada?.items?.reduce((s, i) => s + (i.qty || 1), 0) || 0
+            const color = ocupada ? colorPorTiempo(ocupada.created_at) : C.border
+            const mins = ocupada ? minutosDesde(ocupada.created_at) : 0
+            const urgente = mins >= 25
+            const advertencia = mins >= 15 && mins < 25
             return (
               <div key={n} style={{ display: 'flex', flexDirection: 'column' }}>
-                {/* Tarjeta de mesa */}
                 <div
                   role="button"
                   tabIndex={0}
                   onClick={() => onSelectTable(n, ocupada)}
                   onKeyDown={e => e.key === 'Enter' && onSelectTable(n, ocupada)}
                   style={{
-                    background: ocupada ? C.accent : C.card,
-                    borderTop: `1px solid ${ocupada ? C.accent : C.border}`,
-                    borderLeft: `1px solid ${ocupada ? C.accent : C.border}`,
-                    borderRight: `1px solid ${ocupada ? C.accent : C.border}`,
-                    borderBottom: ocupada ? 'none' : `1px solid ${C.border}`,
+                    background: ocupada ? color : C.card,
+                    borderTop: `1px solid ${color}`,
+                    borderLeft: `1px solid ${color}`,
+                    borderRight: `1px solid ${color}`,
+                    borderBottom: ocupada ? 'none' : `1px solid ${color}`,
                     borderRadius: ocupada ? '14px 14px 0 0' : 14,
                     padding: '16px 14px',
                     cursor: 'pointer', textAlign: 'left', color: C.text,
-                    boxShadow: ocupada ? `0 8px 24px rgba(255,107,0,0.3)` : 'none',
-                    transition: 'all .15s',
+                    boxShadow: ocupada ? `0 8px 24px ${color}44` : 'none',
+                    transition: 'background .8s, border-color .8s, box-shadow .8s',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.7 }}>Mesa</div>
-                    <div style={{
-                      width: 8, height: 8, borderRadius: '50%',
-                      background: ocupada ? '#fff' : C.border,
-                      boxShadow: ocupada ? '0 0 0 3px rgba(255,255,255,0.2)' : 'none',
-                    }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {urgente && <span style={{ fontSize: 11 }}>⚠️</span>}
+                      <div style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: ocupada ? '#fff' : C.border,
+                        boxShadow: ocupada ? '0 0 0 3px rgba(255,255,255,0.2)' : 'none',
+                      }} />
+                    </div>
                   </div>
                   <div style={{ fontFamily: DISPLAY, fontSize: 36, lineHeight: 1, letterSpacing: -1 }}>{n}</div>
                   {ocupada ? (
                     <div style={{ marginTop: 8 }}>
                       <div style={{ fontFamily: DISPLAY, fontSize: 16, letterSpacing: -0.3 }}>S/{Number(ocupada.total).toFixed(0)}</div>
-                      <div style={{ fontSize: 10, opacity: 0.8, fontWeight: 700, marginTop: 2 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, marginTop: 2, opacity: urgente ? 1 : 0.8 }}>
                         {totalItems} {totalItems === 1 ? 'ítem' : 'ítems'} · {tiempoDesde(ocupada.created_at)}
+                        {urgente && ' ·  demorado'}
+                        {advertencia && ' · revisar'}
                       </div>
                     </div>
                   ) : (
@@ -185,19 +196,17 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
                   )}
                 </div>
 
-                {/* Botón cobrar (solo mesas ocupadas) */}
                 {ocupada && (
                   <button
                     onClick={() => setConfirmCobro({ mesa: n, pedido: ocupada })}
                     style={{
                       width: '100%', padding: '7px 12px',
                       background: 'rgba(34,197,94,0.1)',
-                      border: `1px solid ${C.accent}44`,
+                      border: `1px solid ${color}44`,
                       borderTop: 'none',
                       borderRadius: '0 0 14px 14px',
                       color: C.green, fontFamily: FONT, fontWeight: 800, fontSize: 10,
                       cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.5,
-                      transition: 'background .15s',
                     }}
                   >
                     ✓ Cobrar
@@ -207,6 +216,51 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
             )
           })}
         </div>
+
+        {/* Cola de llevar/WA en espera */}
+        {pendientesLlevarWA.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 14, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+              En espera
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {pendientesLlevarWA.map(p => {
+                const color = colorPorTiempo(p.created_at)
+                const mins = minutosDesde(p.created_at)
+                const urgente = mins >= 25
+                const totalItems = p.items?.reduce((s, i) => s + (i.qty || 1), 0) || 0
+                return (
+                  <div key={p.id} style={{
+                    background: C.card,
+                    border: `1px solid ${color}33`,
+                    borderLeft: `3px solid ${color}`,
+                    borderRadius: 10, padding: '10px 14px',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: DISPLAY, fontSize: 13, textTransform: 'uppercase', letterSpacing: -0.2 }}>
+                        {p.tipo === 'llevar' ? '🛵' : '📱'}{' '}
+                        {p.cliente || (p.tipo === 'llevar' ? 'Para llevar' : 'WhatsApp')}
+                        {urgente && <span style={{ marginLeft: 6, fontSize: 12 }}>⚠️</span>}
+                      </div>
+                      <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, marginTop: 2 }}>
+                        {totalItems} {totalItems === 1 ? 'ítem' : 'ítems'} · #{p.numero}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontFamily: DISPLAY, fontSize: 16, color, letterSpacing: -0.3 }}>
+                        {tiempoDesde(p.created_at)}
+                      </div>
+                      <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>
+                        S/{Number(p.total).toFixed(0)}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Para llevar y WhatsApp */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -341,9 +395,20 @@ function bigBtn(bg, borderColor) {
   }
 }
 
+function minutosDesde(iso) {
+  return Math.floor((Date.now() - new Date(iso)) / 60000)
+}
+
 function tiempoDesde(iso) {
-  const mins = Math.floor((Date.now() - new Date(iso)) / 60000)
+  const mins = minutosDesde(iso)
   if (mins < 1) return 'ahora'
   if (mins < 60) return `${mins} min`
-  return `${Math.floor(mins / 60)}h`
+  return `${Math.floor(mins / 60)}h ${mins % 60}min`
+}
+
+function colorPorTiempo(iso) {
+  const mins = minutosDesde(iso)
+  if (mins >= 25) return '#ef4444' // rojo — demorado
+  if (mins >= 15) return '#f59e0b' // ámbar — revisar
+  return C.accent                  // naranja — normal
 }
