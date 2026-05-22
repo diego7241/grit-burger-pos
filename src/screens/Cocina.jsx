@@ -39,6 +39,7 @@ export default function Cocina() {
   const [now, setNow] = useState(new Date())
   const [marcando, setMarcando] = useState(null)
   const [conectado, setConectado] = useState(true)
+  const [actualizados, setActualizados] = useState({})
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -61,7 +62,14 @@ export default function Cocina() {
     cargar()
     const channel = supabase
       .channel('cocina-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, cargar)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, cargar)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'pedidos' }, cargar)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pedidos' }, (payload) => {
+        cargar()
+        if (payload.new && payload.new.listo === false && payload.new.estado === 'confirmado') {
+          setActualizados(prev => ({ ...prev, [payload.new.id]: Date.now() }))
+        }
+      })
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [cargar])
@@ -155,6 +163,7 @@ export default function Cocina() {
           const color = colorPorTiempo(p.created_at)
           const mins = minutosDesde(p.created_at)
           const urgente = mins >= 25
+          const fueActualizado = actualizados[p.id] && (Date.now() - actualizados[p.id]) < 180000
           return (
             <div key={p.id} style={{
               background: '#fff',
@@ -194,9 +203,20 @@ export default function Cocina() {
                 </div>
               </div>
 
-              {/* Items */}
+              {/* Badge actualizado */}
+              {fueActualizado && (
+                <div style={{
+                  background: '#f59e0b', padding: '5px 16px',
+                  color: '#fff', fontSize: 11, fontWeight: 900,
+                  textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center',
+                }}>
+                  ⚡ Pedido actualizado — revisar
+                </div>
+              )}
+
+              {/* Items — los complementos no se muestran solos, ya están en la nota del plato */}
               <div style={{ flex: 1, padding: '14px 16px' }}>
-                {(p.items || []).map((item, i) => (
+                {(p.items || []).filter(item => !item.isComplemento).map((item, i) => (
                   <div key={i} style={{ marginBottom: 10 }}>
                     <div style={{
                       fontSize: 16, fontWeight: 900, color: '#1a1a1a',

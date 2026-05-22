@@ -16,6 +16,7 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
   const [confirmCobro, setConfirmCobro] = useState(null) // { mesa, pedido }
   const [cobrandoId, setCobrandoId] = useState(null)
   const [errorCobro, setErrorCobro] = useState(null)
+  const [pagoModal, setPagoModal] = useState(null)
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -58,18 +59,19 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
   }, [cargarPedidosHoy])
 
   const cobrarMesa = async () => {
-    if (!confirmCobro) return
+    if (!confirmCobro || !pagoModal) return
     setErrorCobro(null)
     setCobrandoId(confirmCobro.pedido.id)
     const { error } = await supabase
       .from('pedidos')
-      .update({ estado: 'entregado' })
+      .update({ estado: 'entregado', metodo_pago: pagoModal })
       .eq('id', confirmCobro.pedido.id)
     setCobrandoId(null)
     if (error) {
       setErrorCobro('No se pudo cobrar. Verifica tu conexión.')
     } else {
       setConfirmCobro(null)
+      setPagoModal(null)
       cargarPedidosHoy()
     }
   }
@@ -209,7 +211,7 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
                 )}
                 {ocupada && (
                   <button
-                    onClick={() => setConfirmCobro({ mesa: n, pedido: ocupada })}
+                    onClick={() => { setConfirmCobro({ mesa: n, pedido: ocupada }); setPagoModal(ocupada.metodo_pago || null) }}
                     style={{
                       width: '100%', padding: '7px 12px',
                       background: ocupada.listo ? 'rgba(34,197,94,0.2)' : 'rgba(34,197,94,0.1)',
@@ -357,13 +359,33 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
             <div style={{ fontFamily: DISPLAY, fontSize: 22, textTransform: 'uppercase', letterSpacing: -0.3, marginBottom: 4 }}>
               Cerrar mesa
             </div>
-            <div style={{ fontSize: 13, color: C.muted, fontWeight: 600, marginBottom: 6 }}>
-              {confirmCobro.pedido.items?.reduce((s, i) => s + (i.qty || 1), 0) || 0} ítems ·{' '}
-              {confirmCobro.pedido.metodo_pago?.toUpperCase()}
+            <div style={{ fontSize: 13, color: C.muted, fontWeight: 600, marginBottom: 16 }}>
+              {confirmCobro.pedido.items?.reduce((s, i) => s + (i.qty || 1), 0) || 0} ítems · S/{Number(confirmCobro.pedido.total).toFixed(2)}
             </div>
-            <div style={{ fontFamily: DISPLAY, fontSize: 36, color: C.accent, letterSpacing: -1, marginBottom: 24 }}>
-              S/{Number(confirmCobro.pedido.total).toFixed(2)}
+
+            {/* Selector de método de pago */}
+            <div style={{ fontSize: 10, color: C.muted, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>
+              Método de pago
             </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, marginBottom: 20 }}>
+              {[
+                { id: 'yape', label: 'Yape', color: C.yape },
+                { id: 'plin', label: 'Plin', color: C.plin },
+                { id: 'tarjeta', label: 'Tarjeta', color: '#2563eb' },
+                { id: 'efectivo', label: 'Efectivo', color: '#16a34a' },
+              ].map(p => (
+                <button key={p.id} onClick={() => setPagoModal(p.id)} style={{
+                  padding: '10px 4px', borderRadius: 10,
+                  border: `1px solid ${pagoModal === p.id ? p.color : C.border}`,
+                  background: pagoModal === p.id ? p.color : C.bg,
+                  color: pagoModal === p.id ? '#fff' : C.muted,
+                  fontFamily: FONT, fontWeight: 800, fontSize: 11,
+                  cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.3,
+                  transition: 'all .15s',
+                }}>{p.label}</button>
+              ))}
+            </div>
+
             {errorCobro && (
               <div style={{
                 marginBottom: 16, padding: '10px 14px', borderRadius: 10,
@@ -373,7 +395,7 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
             )}
             <div style={{ display: 'flex', gap: 10 }}>
               <button
-                onClick={() => { setConfirmCobro(null); setErrorCobro(null) }}
+                onClick={() => { setConfirmCobro(null); setErrorCobro(null); setPagoModal(null) }}
                 disabled={!!cobrandoId}
                 style={{
                   flex: 1, padding: '14px', borderRadius: 12,
@@ -386,17 +408,20 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
               </button>
               <button
                 onClick={cobrarMesa}
-                disabled={!!cobrandoId}
+                disabled={!!cobrandoId || !pagoModal}
                 style={{
                   flex: 2, padding: '14px', borderRadius: 12,
-                  border: 0, background: cobrandoId ? '#333' : C.green, color: cobrandoId ? '#777' : '#fff',
+                  border: 0,
+                  background: cobrandoId || !pagoModal ? '#333' : C.green,
+                  color: cobrandoId || !pagoModal ? '#777' : '#fff',
                   fontFamily: FONT, fontWeight: 800, fontSize: 14,
-                  cursor: cobrandoId ? 'not-allowed' : 'pointer',
+                  cursor: cobrandoId || !pagoModal ? 'not-allowed' : 'pointer',
                   textTransform: 'uppercase', letterSpacing: 0.3,
-                  boxShadow: cobrandoId ? 'none' : '0 8px 24px rgba(34,197,94,0.35)',
+                  boxShadow: cobrandoId || !pagoModal ? 'none' : '0 8px 24px rgba(34,197,94,0.35)',
+                  transition: 'all .15s',
                 }}
               >
-                {cobrandoId ? 'Cerrando...' : '✓ Cobrado — Cerrar mesa'}
+                {cobrandoId ? 'Cerrando...' : !pagoModal ? 'Elige cómo pagó' : '✓ Cobrado — Cerrar mesa'}
               </button>
             </div>
           </div>

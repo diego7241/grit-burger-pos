@@ -66,7 +66,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
       const updated = prev.map(c => c.lineId === forLineId ? { ...c, nota: nuevaNota } : c)
       // Insert price line right after the target item
       const idx = updated.findIndex(c => c.lineId === forLineId)
-      const compLine = { ...comp, qty: 1, nota: '', lineId: `${comp.id}_${Date.now()}` }
+      const compLine = { ...comp, qty: 1, nota: '', lineId: `${comp.id}_${Date.now()}`, isComplemento: true, parentLineId: forLineId }
       const result = [...updated]
       result.splice(idx + 1, 0, compLine)
       return result
@@ -74,13 +74,13 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
   }
 
   const total = cart.reduce((s, c) => s + c.price * c.qty, 0)
-  const canConfirm = cart.length > 0 && pago
+  const canConfirm = cart.length > 0 && (tipo === 'mesa' ? true : !!pago)
 
   const handleConfirm = () => {
     if (!canConfirm) return
     onConfirm({
       tipo, mesa, cliente,
-      items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty, nota: c.nota || '', lineId: c.lineId })),
+      items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty, nota: c.nota || '', lineId: c.lineId, isComplemento: c.isComplemento || false })),
       subtotal: total, total,
       metodo_pago: pago,
       notas: cart.filter(c => c.nota).map(c => `${c.name}: ${c.nota}`).join(' | '),
@@ -291,20 +291,22 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
           </div>
         </div>
 
-        {/* Métodos de pago */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, marginBottom: 10 }}>
-          {PAGOS.map(p => (
-            <button key={p.id} onClick={() => setPago(p.id)} style={{
-              padding: '8px 4px', borderRadius: 8,
-              border: `1px solid ${pago === p.id ? p.color : C.border}`,
-              background: pago === p.id ? p.color : C.bg,
-              color: pago === p.id ? '#fff' : C.muted,
-              fontFamily: FONT, fontWeight: 800, fontSize: 11,
-              cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.3,
-              transition: 'all .15s',
-            }}>{p.label}</button>
-          ))}
-        </div>
+        {/* Métodos de pago — solo para llevar/WA, mesa paga al cobrar */}
+        {tipo !== 'mesa' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, marginBottom: 10 }}>
+            {PAGOS.map(p => (
+              <button key={p.id} onClick={() => setPago(p.id)} style={{
+                padding: '8px 4px', borderRadius: 8,
+                border: `1px solid ${pago === p.id ? p.color : C.border}`,
+                background: pago === p.id ? p.color : C.bg,
+                color: pago === p.id ? '#fff' : C.muted,
+                fontFamily: FONT, fontWeight: 800, fontSize: 11,
+                cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.3,
+                transition: 'all .15s',
+              }}>{p.label}</button>
+            ))}
+          </div>
+        )}
 
         {/* Confirmar */}
         <button onClick={handleConfirm} disabled={!canConfirm} style={{
@@ -317,9 +319,11 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
           boxShadow: canConfirm ? `0 8px 24px rgba(255,107,0,0.4)` : 'none',
           transition: 'all .15s',
         }}>
-          {canConfirm
-            ? `${esEdicion ? 'Actualizar' : 'Confirmar'} · S/${total.toFixed(2)}`
-            : 'Agrega productos y elige pago'}
+          {cart.length === 0
+            ? 'Agrega productos'
+            : !canConfirm
+            ? 'Elige método de pago'
+            : `${esEdicion ? 'Actualizar' : 'Confirmar'} · S/${total.toFixed(2)}`}
         </button>
       </div>
 
