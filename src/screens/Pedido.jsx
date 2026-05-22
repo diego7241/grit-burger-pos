@@ -283,8 +283,13 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
       <div style={{ padding: '12px 18px 28px', borderTop: `1px solid ${C.border}`, background: C.card, flexShrink: 0 }}>
         {/* Resumen carrito */}
         {cart.length > 0 && (
-          <div style={{ marginBottom: 10, maxHeight: 100, overflowY: 'auto' }}>
-            {cart.map(c => (
+          <div style={{ marginBottom: 10, maxHeight: 110, overflowY: 'auto' }}>
+            {cart.map(c => c.isComplemento ? (
+              <div key={c.lineId} style={{ padding: '1px 0 1px 14px', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 11, color: C.dim, fontWeight: 600 }}>↳ + {c.name}</span>
+                <span style={{ fontSize: 11, color: C.dim, fontWeight: 600 }}>S/{(c.price * c.qty).toFixed(2)}</span>
+              </div>
+            ) : (
               <div key={c.lineId} style={{ padding: '2px 0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: C.muted }}>
                   <span><span style={{ color: C.accent }}>{c.qty}×</span> {c.name}</span>
