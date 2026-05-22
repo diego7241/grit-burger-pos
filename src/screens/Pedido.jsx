@@ -45,7 +45,8 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
       if (!ex) return prev
       if (ex.qty === 1) {
         setNotaAbierta(n => n === lineId ? null : n)
-        return prev.filter(c => c.lineId !== lineId)
+        // Al eliminar el item principal, también eliminar sus complementos
+        return prev.filter(c => c.lineId !== lineId && c.parentLineId !== lineId)
       }
       return prev.map(c => c.lineId === lineId ? { ...c, qty: c.qty - 1 } : c)
     })
@@ -57,14 +58,24 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
 
   const agregarComplemento = (comp, forLineId) => {
     setCart(prev => {
+      const yaAgregado = prev.find(c => c.parentLineId === forLineId && c.id === comp.id)
       const target = prev.find(c => c.lineId === forLineId)
       if (!target) return prev
-      // Append extra name to note
+
+      if (yaAgregado) {
+        // Quitar: borrar del carrito y remover del texto de nota
+        const sinComp = target.nota
+          .replace(new RegExp(`,?\\s*${comp.name.toLowerCase()}`, 'i'), '')
+          .replace(/^,\s*/, '').trim()
+        return prev
+          .filter(c => c.lineId !== yaAgregado.lineId)
+          .map(c => c.lineId === forLineId ? { ...c, nota: sinComp } : c)
+      }
+
+      // Agregar: texto a nota + line item de precio
       const notaActual = target.nota || ''
-      const nuevoNombre = comp.name.toLowerCase()
-      const nuevaNota = notaActual ? `${notaActual}, ${nuevoNombre}` : nuevoNombre
+      const nuevaNota = notaActual ? `${notaActual}, ${comp.name.toLowerCase()}` : comp.name.toLowerCase()
       const updated = prev.map(c => c.lineId === forLineId ? { ...c, nota: nuevaNota } : c)
-      // Insert price line right after the target item
       const idx = updated.findIndex(c => c.lineId === forLineId)
       const compLine = { ...comp, qty: 1, nota: '', lineId: `${comp.id}_${Date.now()}`, isComplemento: true, parentLineId: forLineId }
       const result = [...updated]
@@ -205,29 +216,35 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
                         fontWeight: 600, fontSize: 13, outline: 'none', boxSizing: 'border-box',
                       }}
                     />
-                    {/* Chips de complementos */}
+                    {/* Chips de complementos — toggleables */}
                     <div style={{
                       display: 'flex', gap: 6, overflowX: 'auto',
                       marginTop: 8, paddingBottom: 2, scrollbarWidth: 'none',
                     }}>
-                      {MENU.complementos.items.map(comp => (
-                        <button
-                          key={comp.id}
-                          onClick={() => agregarComplemento(comp, lastLine.lineId)}
-                          style={{
-                            flexShrink: 0, padding: '5px 10px', borderRadius: 8,
-                            background: C.bg, border: `1px solid ${C.border}`,
-                            color: C.muted, fontFamily: FONT, fontWeight: 700,
-                            fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
-                            display: 'flex', alignItems: 'center', gap: 5,
-                          }}
-                        >
-                          + {comp.name}
-                          <span style={{ color: C.accent, fontFamily: DISPLAY, fontSize: 11 }}>
-                            S/{comp.price % 1 === 0 ? comp.price : comp.price.toFixed(1)}
-                          </span>
-                        </button>
-                      ))}
+                      {MENU.complementos.items.map(comp => {
+                        const agregado = cart.some(c => c.parentLineId === lastLine.lineId && c.id === comp.id)
+                        return (
+                          <button
+                            key={comp.id}
+                            onClick={() => agregarComplemento(comp, lastLine.lineId)}
+                            style={{
+                              flexShrink: 0, padding: '5px 10px', borderRadius: 8,
+                              background: agregado ? C.accent : C.bg,
+                              border: `1px solid ${agregado ? C.accent : C.border}`,
+                              color: agregado ? '#fff' : C.muted,
+                              fontFamily: FONT, fontWeight: 700,
+                              fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
+                              display: 'flex', alignItems: 'center', gap: 5,
+                              transition: 'all .15s',
+                            }}
+                          >
+                            {agregado ? '✓' : '+'} {comp.name}
+                            <span style={{ color: agregado ? 'rgba(255,255,255,0.8)' : C.accent, fontFamily: DISPLAY, fontSize: 11 }}>
+                              S/{comp.price % 1 === 0 ? comp.price : comp.price.toFixed(1)}
+                            </span>
+                          </button>
+                        )
+                      })}
                     </div>
                     {lastLine.nota && (
                       <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginTop: 6, letterSpacing: 0.5 }}>
