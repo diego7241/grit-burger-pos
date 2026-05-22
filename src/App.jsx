@@ -5,6 +5,7 @@ import Panel from './screens/Panel'
 import Pedido from './screens/Pedido'
 import Ticket from './screens/Ticket'
 import Historial from './screens/Historial'
+import Cocina from './screens/Cocina'
 import { C, FONT, DISPLAY } from './lib/theme'
 
 function ModalNombre({ titulo, subtitulo, onConfirm, onCancel }) {
@@ -61,6 +62,8 @@ function ModalNombre({ titulo, subtitulo, onConfirm, onCancel }) {
 }
 
 export default function App() {
+  if (window.location.pathname === '/cocina') return <Cocina />
+
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [screen, setScreen] = useState('panel')

@@ -196,12 +196,24 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
                   )}
                 </div>
 
+                {ocupada && ocupada.listo && (
+                  <div style={{
+                    background: '#22c55e', padding: '5px 12px',
+                    borderLeft: `1px solid ${color}44`,
+                    borderRight: `1px solid ${color}44`,
+                    textAlign: 'center',
+                    color: '#fff', fontFamily: FONT, fontWeight: 900, fontSize: 11,
+                    textTransform: 'uppercase', letterSpacing: 1,
+                  }}>
+                    ✓ LISTO — a entregar
+                  </div>
+                )}
                 {ocupada && (
                   <button
                     onClick={() => setConfirmCobro({ mesa: n, pedido: ocupada })}
                     style={{
                       width: '100%', padding: '7px 12px',
-                      background: 'rgba(34,197,94,0.1)',
+                      background: ocupada.listo ? 'rgba(34,197,94,0.2)' : 'rgba(34,197,94,0.1)',
                       border: `1px solid ${color}44`,
                       borderTop: 'none',
                       borderRadius: '0 0 14px 14px',
@@ -248,9 +260,19 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontFamily: DISPLAY, fontSize: 16, color, letterSpacing: -0.3 }}>
-                        {tiempoDesde(p.created_at)}
-                      </div>
+                      {p.listo ? (
+                        <div style={{
+                          background: '#22c55e', color: '#fff',
+                          borderRadius: 6, padding: '3px 8px',
+                          fontSize: 11, fontWeight: 900,
+                          textTransform: 'uppercase', letterSpacing: 0.5,
+                          marginBottom: 3,
+                        }}>✓ Listo</div>
+                      ) : (
+                        <div style={{ fontFamily: DISPLAY, fontSize: 16, color, letterSpacing: -0.3 }}>
+                          {tiempoDesde(p.created_at)}
+                        </div>
+                      )}
                       <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>
                         S/{Number(p.total).toFixed(0)}
                       </div>
