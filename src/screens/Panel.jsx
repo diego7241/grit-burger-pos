@@ -299,24 +299,27 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div>
-                        {p.listo ? (
-                          <div style={{
-                            background: '#22c55e', color: '#fff',
-                            borderRadius: 6, padding: '3px 8px',
-                            fontSize: 11, fontWeight: 900,
-                            textTransform: 'uppercase', letterSpacing: 0.5,
-                            marginBottom: 3,
-                          }}>✓ Listo</div>
-                        ) : (
+                      <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textAlign: 'right' }}>
+                        {!p.listo && (
                           <div style={{ fontFamily: DISPLAY, fontSize: 16, color, letterSpacing: -0.3 }}>
                             {tiempoDesde(p.created_at)}
                           </div>
                         )}
-                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>
-                          S/{Number(p.total).toFixed(0)}
-                        </div>
+                        S/{Number(p.total).toFixed(0)}
                       </div>
+                      {p.listo && (
+                        <button
+                          onClick={() => { setConfirmCobro({ pedido: p }); setPagoModal(p.metodo_pago || null) }}
+                          style={{
+                            padding: '6px 12px', borderRadius: 8,
+                            background: 'rgba(34,197,94,0.15)',
+                            border: '1px solid rgba(34,197,94,0.4)',
+                            color: C.green, fontFamily: FONT, fontWeight: 900, fontSize: 11,
+                            cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.5,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >✓ Cobrar</button>
+                      )}
                       <button
                         onClick={() => setConfirmCancel({ label: p.cliente || (p.tipo === 'llevar' ? 'Para llevar' : 'WhatsApp'), pedidoId: p.id })}
                         style={{
@@ -463,10 +466,10 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
             borderTop: `1px solid ${C.border}`,
           }}>
             <div style={{ fontSize: 10, color: C.accent, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
-              Mesa {confirmCobro.mesa}
+              {confirmCobro.mesa ? `Mesa ${confirmCobro.mesa}` : confirmCobro.pedido.tipo === 'llevar' ? '🛵 Para llevar' : '📱 WhatsApp'}
             </div>
             <div style={{ fontFamily: DISPLAY, fontSize: 22, textTransform: 'uppercase', letterSpacing: -0.3, marginBottom: 4 }}>
-              Cerrar mesa
+              {confirmCobro.mesa ? 'Cerrar mesa' : confirmCobro.pedido.cliente ? `Entregar a ${confirmCobro.pedido.cliente}` : 'Entregar pedido'}
             </div>
             <div style={{ fontSize: 13, color: C.muted, fontWeight: 600, marginBottom: 16 }}>
               {confirmCobro.pedido.items?.reduce((s, i) => s + (i.qty || 1), 0) || 0} ítems · S/{Number(confirmCobro.pedido.total).toFixed(2)}
