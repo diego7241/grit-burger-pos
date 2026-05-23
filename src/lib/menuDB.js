@@ -43,6 +43,7 @@ export async function fetchMenu() {
         name: item.name,
         desc: item.descripcion || '',
         price: Number(item.price),
+        categoria: item.categoria,
       })
     }
   })

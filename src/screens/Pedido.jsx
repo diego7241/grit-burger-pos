@@ -41,7 +41,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
       setNotaAbierta(lastNoNote.lineId)
     } else {
       const lineId = `${item.id}_${Date.now()}`
-      setCart(prev => [...prev, { ...item, qty: 1, nota: '', lineId }])
+      setCart(prev => [...prev, { ...item, qty: 1, nota: '', lineId, categoria: item.categoria || cat }])
       setNotaAbierta(lineId)
     }
   }
