@@ -101,7 +101,14 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
       items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty, nota: c.nota || '', lineId: c.lineId, isComplemento: c.isComplemento || false, categoria: c.categoria || '' })),
       subtotal: total, total,
       metodo_pago: pago,
-      notas: cart.filter(c => c.nota).map(c => `${c.name}: ${c.nota}`).join(' | '),
+      notas: cart.filter(c => c.nota && !c.isComplemento).map(c => {
+        const compKids = cart.filter(x => x.isComplemento && x.parentLineId === c.lineId)
+        const notaLimpia = compKids.reduce(
+          (n, comp) => n.replace(new RegExp(`,?\\s*${comp.name}`, 'i'), '').replace(/^,\s*/, '').trim(),
+          c.nota
+        )
+        return notaLimpia ? `${c.name}: ${notaLimpia}` : null
+      }).filter(Boolean).join(' | ') || null,
       pedidoExistenteId: pedidoExistente?.id || null,
     })
   }

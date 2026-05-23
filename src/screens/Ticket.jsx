@@ -70,8 +70,14 @@ export default function Ticket({ pedido, onVolver }) {
     const titulo = esActualizacion ? `🔄 ACTUALIZACIÓN · ${tipoBase}` : tipoBase
 
     const items = pedido.items.map(i => {
+      if (i.isComplemento) return `     ↳ + ${i.name} — S/${(i.price * i.qty).toFixed(2)}`
+      const compKids = pedido.items.filter(x => x.isComplemento && x.parentLineId === i.lineId)
+      const notaLimpia = compKids.reduce(
+        (n, comp) => n.replace(new RegExp(`,?\\s*${comp.name}`, 'i'), '').replace(/^,\s*/, '').trim(),
+        i.nota || ''
+      )
       const linea = `  ${i.qty}× ${i.name} — S/${(i.price * i.qty).toFixed(2)}`
-      return i.nota ? `${linea}\n     📝 ${i.nota}` : linea
+      return notaLimpia ? `${linea}\n     📝 ${notaLimpia}` : linea
     }).join('\n')
 
     const pago = pedido.metodo_pago.toUpperCase()
@@ -177,19 +183,34 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
             <div style={{ fontSize: 10, fontWeight: 700, color: '#666', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
               {'CANT  PRODUCTO              IMPORTE'}
             </div>
-            {pedido.items.map((item, i) => (
-              <div key={i} style={{ marginBottom: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700 }}>
-                  <span>{item.qty}× {item.name}</span>
-                  <span>S/{(item.price * item.qty).toFixed(2)}</span>
-                </div>
-                {item.nota && (
-                  <div style={{ fontSize: 10, color: '#FF6B00', paddingLeft: 16, marginTop: 2, fontWeight: 600 }}>
-                    📝 {item.nota}
+            {pedido.items.map((item, i) => {
+              if (item.isComplemento) return (
+                <div key={i} style={{ paddingLeft: 16, marginBottom: 3 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#888' }}>
+                    <span>↳ + {item.name}</span>
+                    <span>S/{(item.price * item.qty).toFixed(2)}</span>
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              )
+              const compKids = pedido.items.filter(x => x.isComplemento && x.parentLineId === item.lineId)
+              const notaLimpia = compKids.reduce(
+                (n, comp) => n.replace(new RegExp(`,?\\s*${comp.name}`, 'i'), '').replace(/^,\s*/, '').trim(),
+                item.nota || ''
+              )
+              return (
+                <div key={i} style={{ marginBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700 }}>
+                    <span>{item.qty}× {item.name}</span>
+                    <span>S/{(item.price * item.qty).toFixed(2)}</span>
+                  </div>
+                  {notaLimpia && (
+                    <div style={{ fontSize: 10, color: '#FF6B00', paddingLeft: 16, marginTop: 2, fontWeight: 600 }}>
+                      📝 {notaLimpia}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           {pedido.servicio > 0 ? (
