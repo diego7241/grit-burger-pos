@@ -78,7 +78,7 @@ export const MENU = {
       { id: 'e3', name: 'Queso', desc: 'Extra', price: 2 },
       { id: 'e4', name: 'Jamón', desc: 'Extra', price: 1.5 },
       { id: 'e5', name: 'Chorizo', desc: 'Extra', price: 2.5 },
-      { id: 'e6', name: 'Plátano frito', desc: 'Extra', price: 2 },
+      { id: 'e6', name: 'Plátano Frito', desc: 'Extra', price: 2 },
       { id: 'e7', name: 'Porción de papas', desc: 'Extra', price: 7 },
     ],
   },
