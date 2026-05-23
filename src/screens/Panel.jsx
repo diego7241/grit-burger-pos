@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { getConfig } from '../lib/menuDB'
 import { C, FONT, DISPLAY } from '../lib/theme'
 
 // Lima es UTC-5, sin horario de verano
@@ -8,7 +9,7 @@ function inicioHoyLima() {
   return `${hoy}T05:00:00.000Z`
 }
 
-export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory, onLogout }) {
+export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory, onAdmin, onLogout }) {
   const [now, setNow] = useState(new Date())
   const [pedidosHoy, setPedidosHoy] = useState([])
   const [mesasOcupadas, setMesasOcupadas] = useState({})
@@ -19,6 +20,7 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
   const [pagoModal, setPagoModal] = useState(null)
   const [confirmCancel, setConfirmCancel] = useState(null) // { label, pedidoId }
   const [cancelando, setCancelando] = useState(false)
+  const [numMesas, setNumMesas] = useState(4)
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -47,6 +49,10 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
       })
       setMesasOcupadas(ocupadas)
     }
+  }, [])
+
+  useEffect(() => {
+    getConfig('num_mesas').then(v => { if (v) setNumMesas(Number(v)) })
   }, [])
 
   useEffect(() => {
@@ -102,7 +108,7 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
   const hora = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
   const segundos = now.getSeconds().toString().padStart(2, '0')
   const fecha = now.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })
-  const mesas = [1, 2, 3, 4]
+  const mesas = Array.from({ length: numMesas }, (_, i) => i + 1)
 
   return (
     <div style={{
@@ -155,7 +161,7 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontFamily: DISPLAY, fontSize: 14, textTransform: 'uppercase', letterSpacing: 1 }}>Mesas</div>
           <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>
-            {Object.keys(mesasOcupadas).length}/4 ocupadas
+            {Object.keys(mesasOcupadas).length}/{numMesas} ocupadas
           </div>
         </div>
 
@@ -379,6 +385,12 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
           fontFamily: FONT, fontWeight: 700, fontSize: 12, cursor: 'pointer',
           letterSpacing: 1, textTransform: 'uppercase',
         }}>📋 Historial</button>
+        <button onClick={onAdmin} style={{
+          background: 'transparent', border: `1px solid ${C.border}`,
+          borderRadius: 8, padding: '8px 14px', color: C.muted,
+          fontFamily: FONT, fontWeight: 700, fontSize: 12, cursor: 'pointer',
+          letterSpacing: 1, textTransform: 'uppercase',
+        }}>⚙ Admin</button>
         <button onClick={onLogout} style={{
           background: 'transparent', border: 'none',
           color: C.dim, fontFamily: FONT, fontWeight: 700, fontSize: 11,

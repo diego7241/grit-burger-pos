@@ -1,9 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { C, FONT, DISPLAY } from '../lib/theme'
-import { MENU, MENU_CATEGORIES } from '../lib/menu'
+import { MENU } from '../lib/menu'
+import { fetchMenu } from '../lib/menuDB'
 
 export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm, onBack }) {
+  const [menuData, setMenuData] = useState({ menu: MENU, categorias: Object.keys(MENU) })
   const [cat, setCat] = useState('hamburguesas')
+
+  useEffect(() => {
+    fetchMenu().then(data => {
+      setMenuData(data)
+      if (!data.categorias.includes('hamburguesas')) setCat(data.categorias[0] || 'hamburguesas')
+    })
+  }, [])
   const [cart, setCart] = useState(() =>
     pedidoExistente?.items
       ? pedidoExistente.items.map((i, idx) => ({
@@ -104,7 +113,8 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
     { id: 'efectivo', label: 'Efectivo', color: '#16a34a' },
   ]
 
-  const menuItems = MENU[cat]?.items || []
+  const { menu, categorias: MENU_CATEGORIES } = menuData
+  const menuItems = menu[cat]?.items || []
 
   return (
     <div style={{
@@ -149,7 +159,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
             cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.5,
             transition: 'all .15s', marginRight: 4,
           }}>
-            {MENU[key].emoji} {MENU[key].label}
+            {menu[key]?.emoji} {menu[key]?.label}
           </button>
         ))}
       </div>
@@ -219,7 +229,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
                       display: 'flex', gap: 6, overflowX: 'auto',
                       marginTop: 8, paddingBottom: 2, scrollbarWidth: 'none',
                     }}>
-                      {MENU.complementos.items.map(comp => {
+                      {(menu.complementos?.items || []).map(comp => {
                         const agregado = cart.some(c => c.parentLineId === lastLine.lineId && c.id === comp.id)
                         return (
                           <button

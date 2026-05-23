@@ -6,6 +6,7 @@ import Pedido from './screens/Pedido'
 import Ticket from './screens/Ticket'
 import Historial from './screens/Historial'
 import Cocina from './screens/Cocina'
+import Admin from './screens/Admin'
 import { C, FONT, DISPLAY } from './lib/theme'
 
 function ModalNombre({ titulo, subtitulo, onConfirm, onCancel }) {
@@ -139,6 +140,8 @@ export default function App() {
     )
   } else if (screen === 'historial') {
     contenido = <Historial onBack={() => setScreen('panel')} />
+  } else if (screen === 'admin') {
+    contenido = <Admin onBack={() => setScreen('panel')} />
   } else {
     contenido = (
       <Panel
@@ -146,6 +149,7 @@ export default function App() {
         onTakeaway={handleTakeaway}
         onWhatsApp={handleWhatsApp}
         onHistory={() => setScreen('historial')}
+        onAdmin={() => setScreen('admin')}
         onLogout={handleLogout}
       />
     )
