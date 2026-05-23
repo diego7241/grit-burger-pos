@@ -1,5 +1,32 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+
+function beep(ctx, freq, duracion, offset = 0) {
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+  osc.type = 'sine'
+  osc.frequency.value = freq
+  gain.gain.setValueAtTime(0, ctx.currentTime + offset)
+  gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + offset + 0.01)
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + duracion)
+  osc.start(ctx.currentTime + offset)
+  osc.stop(ctx.currentTime + offset + duracion + 0.05)
+}
+
+// 3 tonos ascendentes — pedido nuevo
+function sonarNuevo(ctx) {
+  beep(ctx, 880,  0.14, 0)
+  beep(ctx, 1100, 0.14, 0.18)
+  beep(ctx, 1320, 0.20, 0.36)
+}
+
+// 2 tonos cortos — pedido modificado
+function sonarModificado(ctx) {
+  beep(ctx, 660, 0.10, 0)
+  beep(ctx, 880, 0.10, 0.14)
+}
 
 const FONT = "'Archivo', system-ui, sans-serif"
 const DISPLAY = "'Archivo Black', 'Archivo', sans-serif"
@@ -40,6 +67,17 @@ export default function Cocina() {
   const [marcando, setMarcando] = useState(null)
   const [conectado, setConectado] = useState(true)
   const [actualizados, setActualizados] = useState({})
+  const [audioActivo, setAudioActivo] = useState(false)
+  const audioCtxRef = useRef(null)
+
+  const activarAudio = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)()
+    }
+    setAudioActivo(true)
+    // Tono de confirmación al activar
+    sonarNuevo(audioCtxRef.current)
+  }
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -62,12 +100,18 @@ export default function Cocina() {
     cargar()
     const channel = supabase
       .channel('cocina-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, cargar)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, (payload) => {
+        cargar()
+        if (payload.new?.estado === 'confirmado' && audioCtxRef.current) {
+          sonarNuevo(audioCtxRef.current)
+        }
+      })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'pedidos' }, cargar)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pedidos' }, (payload) => {
         cargar()
         if (payload.new && payload.new.listo === false && payload.new.estado === 'confirmado') {
           setActualizados(prev => ({ ...prev, [payload.new.id]: Date.now() }))
+          if (audioCtxRef.current) sonarModificado(audioCtxRef.current)
         }
       })
       .subscribe()
@@ -89,6 +133,29 @@ export default function Cocina() {
       background: '#f0f0f0', fontFamily: FONT,
       display: 'flex', flexDirection: 'column',
     }}>
+
+      {/* Overlay activar sonido — desaparece al tocar */}
+      {!audioActivo && (
+        <div
+          onClick={activarAudio}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            background: 'rgba(0,0,0,0.92)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ fontSize: 64, marginBottom: 20 }}>🔔</div>
+          <div style={{
+            fontFamily: DISPLAY, fontSize: 28, color: '#fff',
+            textTransform: 'uppercase', letterSpacing: -0.5, marginBottom: 10,
+          }}>Activar sonido</div>
+          <div style={{ fontSize: 14, color: '#888', fontWeight: 600 }}>
+            Tocar para recibir alertas de nuevos pedidos
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{
