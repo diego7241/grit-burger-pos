@@ -77,7 +77,18 @@ export default function Historial({ onBack }) {
     if (!err) cargar()
   }
 
-  const generarReporte = () => {
+  const generarReporte = async () => {
+    let logoBase64 = ''
+    try {
+      const res = await fetch('/logo.jpg')
+      const blob = await res.blob()
+      logoBase64 = await new Promise(resolve => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.readAsDataURL(blob)
+      })
+    } catch (_) {}
+
     const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -109,9 +120,12 @@ export default function Historial({ onBack }) {
 </head>
 <body>
 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px">
-  <div>
-    <h1>Grit Burger <span class="accent">POS</span></h1>
-    <div style="color:#666;margin-top:6px;font-size:14px;font-weight:600;text-transform:capitalize">${labelFechaLargo}</div>
+  <div style="display:flex;align-items:center;gap:14px">
+    ${logoBase64 ? `<img src="${logoBase64}" style="height:52px;width:52px;border-radius:10px;object-fit:cover;flex-shrink:0" />` : ''}
+    <div>
+      <h1>Grit Burger <span class="accent">POS</span></h1>
+      <div style="color:#666;margin-top:4px;font-size:14px;font-weight:600;text-transform:capitalize">${labelFechaLargo}</div>
+    </div>
   </div>
   <div style="text-align:right;font-size:11px;color:#aaa;line-height:1.6">
     Generado: ${new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}<br/>Lima, Perú
