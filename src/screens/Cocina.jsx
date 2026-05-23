@@ -28,6 +28,29 @@ function sonarModificado(ctx) {
   beep(ctx, 880, 0.10, 0.14)
 }
 
+function decir(texto) {
+  if (!window.speechSynthesis) return
+  window.speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance(texto)
+  u.lang = 'es-PE'
+  u.rate = 0.95
+  u.pitch = 1
+  u.volume = 1
+  window.speechSynthesis.speak(u)
+}
+
+function textoAnuncio(p) {
+  if (p.tipo === 'mesa') return `Pedido, mesa ${p.mesa}`
+  if (p.tipo === 'llevar') return p.cliente ? `Para llevar, ${p.cliente}` : 'Pedido para llevar'
+  return p.cliente ? `Pedido WhatsApp, ${p.cliente}` : 'Pedido por WhatsApp'
+}
+
+function textoActualizado(p) {
+  if (p.tipo === 'mesa') return `Mesa ${p.mesa}, pedido actualizado`
+  if (p.tipo === 'llevar') return p.cliente ? `Llevar ${p.cliente}, actualizado` : 'Para llevar, actualizado'
+  return 'WhatsApp, pedido actualizado'
+}
+
 const FONT = "'Archivo', system-ui, sans-serif"
 const DISPLAY = "'Archivo Black', 'Archivo', sans-serif"
 const ACCENT = '#FF6B00'
@@ -104,6 +127,7 @@ export default function Cocina() {
         cargar()
         if (payload.new?.estado === 'confirmado' && audioCtxRef.current) {
           sonarNuevo(audioCtxRef.current)
+          setTimeout(() => decir(textoAnuncio(payload.new)), 600)
         }
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'pedidos' }, cargar)
@@ -112,6 +136,7 @@ export default function Cocina() {
         if (payload.new && payload.new.listo === false && payload.new.estado === 'confirmado') {
           setActualizados(prev => ({ ...prev, [payload.new.id]: Date.now() }))
           if (audioCtxRef.current) sonarModificado(audioCtxRef.current)
+          setTimeout(() => decir(textoActualizado(payload.new)), 400)
         }
       })
       .subscribe()
@@ -151,8 +176,11 @@ export default function Cocina() {
             fontFamily: DISPLAY, fontSize: 28, color: '#fff',
             textTransform: 'uppercase', letterSpacing: -0.5, marginBottom: 10,
           }}>Activar sonido</div>
-          <div style={{ fontSize: 14, color: '#888', fontWeight: 600 }}>
-            Tocar para recibir alertas de nuevos pedidos
+          <div style={{ fontSize: 14, color: '#888', fontWeight: 600, textAlign: 'center' }}>
+            Tocar para activar alertas de voz y sonido
+          </div>
+          <div style={{ marginTop: 12, fontSize: 12, color: '#555', fontWeight: 600 }}>
+            "Pedido nuevo" · "Pedido actualizado"
           </div>
         </div>
       )}
