@@ -303,11 +303,18 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
                   <span><span style={{ color: C.accent }}>{c.qty}×</span> {c.name}</span>
                   <span style={{ color: C.text }}>S/{(c.price * c.qty).toFixed(2)}</span>
                 </div>
-                {c.nota && (
-                  <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, paddingLeft: 16 }}>
-                    📝 {c.nota}
-                  </div>
-                )}
+                {(() => {
+                  const compKids = cart.filter(x => x.isComplemento && x.parentLineId === c.lineId)
+                  const notaLimpia = compKids.reduce(
+                    (n, comp) => n.replace(new RegExp(`,?\\s*${comp.name}`, 'i'), '').replace(/^,\s*/, '').trim(),
+                    c.nota
+                  )
+                  return notaLimpia ? (
+                    <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, paddingLeft: 16 }}>
+                      📝 {notaLimpia}
+                    </div>
+                  ) : null
+                })()}
               </div>
             ))}
           </div>
