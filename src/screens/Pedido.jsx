@@ -98,7 +98,7 @@ export default function Pedido({ tipo, mesa, cliente, pedidoExistente, onConfirm
     if (!canConfirm) return
     onConfirm({
       tipo, mesa, cliente,
-      items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty, nota: c.nota || '', lineId: c.lineId, isComplemento: c.isComplemento || false })),
+      items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty, nota: c.nota || '', lineId: c.lineId, isComplemento: c.isComplemento || false, categoria: c.categoria || '' })),
       subtotal: total, total,
       metodo_pago: pago,
       notas: cart.filter(c => c.nota).map(c => `${c.name}: ${c.nota}`).join(' | '),

@@ -322,7 +322,14 @@ export default function Cocina() {
                       }}>
                         {item.qty}×
                       </span>
-                      {item.name}
+                      <span>
+                        {item.name}
+                        {item.categoria && item.categoria !== 'complementos' && (
+                          <span style={{ fontSize: 10, color: '#888', fontWeight: 700, marginLeft: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            {item.categoria}
+                          </span>
+                        )}
+                      </span>
                     </div>
                     {item.nota && (
                       <div style={{
