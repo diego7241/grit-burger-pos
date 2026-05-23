@@ -3,7 +3,7 @@ export const MENU = {
     label: 'Promos',
     emoji: '🔥',
     items: [
-      { id: 'p1', name: '12 Alitas', desc: '2 sabores + papas + ½L chicha', price: 39 },
+      { id: 'p1', name: '12 Alitas', desc: '2 sabores + papas + ½L de chicha', price: 39 },
       { id: 'p2', name: 'Dúo Burger Royal', desc: '2 Royal + ½L chicha gratis', price: 32 },
       { id: 'p3', name: 'Salchi Papa Royal', desc: '2 salchipapas Royal + Inka Kola 600ml', price: 32 },
       { id: 'p4', name: 'Combo Para 2', desc: 'Salchipapa mixta para 2 + ½L chicha', price: 31 },
