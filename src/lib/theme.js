@@ -1,8 +1,8 @@
 export const C = {
-  bg: '#1a1a1a',
-  card: '#0f0f0f',
-  cardHi: '#222',
-  border: '#2a2a2a',
+  bg: '#000',
+  card: '#111',
+  cardHi: '#1a1a1a',
+  border: '#222',
   borderHi: '#3a3a3a',
   text: '#ffffff',
   muted: '#9a9a9a',
