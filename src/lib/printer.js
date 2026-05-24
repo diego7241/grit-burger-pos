@@ -72,6 +72,8 @@ export async function imprimirTicket(pedido, numero) {
     pedido.tipo === 'llevar' ? (pedido.cliente ? `Llevar: ${pedido.cliente}` : 'Para llevar') :
     (pedido.cliente ? `WA: ${pedido.cliente}` : 'WhatsApp')
 
+  const esLlevarWA = pedido.tipo === 'llevar' || pedido.tipo === 'whatsapp'
+
   const partes = [
     b(0x1B, 0x40),                        // init
     b(0x1B, 0x61, 0x01),                  // centro
@@ -79,11 +81,24 @@ export async function imprimirTicket(pedido, numero) {
     t('GRIT BURGER\n'),
     b(0x1D, 0x21, 0x00), b(0x1B, 0x45, 0x00),
     t(`Ticket #${numero}\n`),
+    t('-'.repeat(ANCHO) + '\n'),
+  ]
+
+  // Nombre cliente destacado para llevar/WA
+  if (esLlevarWA && pedido.cliente) {
+    partes.push(
+      b(0x1B, 0x45, 0x01), b(0x1D, 0x21, 0x01),
+      t(`** ${pedido.cliente.toUpperCase()} **\n`),
+      b(0x1D, 0x21, 0x00), b(0x1B, 0x45, 0x00),
+    )
+  }
+
+  partes.push(
     b(0x1B, 0x61, 0x00),                  // izquierda
     b(0x1B, 0x45, 0x01), t(`${tipoLabel}\n`), b(0x1B, 0x45, 0x00),
     t(`${fecha}  ${hora}\n`),
     t('-'.repeat(ANCHO) + '\n'),
-  ]
+  )
 
   const items = (pedido.items || []).filter(i => !i.isComplemento)
   for (const item of items) {
@@ -120,7 +135,8 @@ export async function imprimirTicket(pedido, numero) {
 
   partes.push(
     b(0x1B, 0x61, 0x01),
-    t('\nGracias por tu visita!\ngritburger.pe\n\n\n\n'),
+    t('\nGracias por tu visita!\ngritburger.pe\n'),
+    t('- '.repeat(ANCHO / 2) + '\n\n\n'),
     b(0x1D, 0x56, 0x42, 0x00),            // cortar papel
   )
 
