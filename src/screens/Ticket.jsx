@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { C, FONT, DISPLAY, WHATSAPP_COCINA } from '../lib/theme'
+import { bluetoothDisponible, conectarImpresora, imprimirTicket } from '../lib/printer'
 
 const PAGO_COLORS = { yape: C.yape, plin: C.plin, tarjeta: '#2563eb', efectivo: '#16a34a' }
 
@@ -9,6 +10,9 @@ export default function Ticket({ pedido, onVolver }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [pagoEfectivo, setPagoEfectivo] = useState('')
+  const [imprimiendo, setImprimiendo] = useState(false)
+  const [nombreImpresora, setNombreImpresora] = useState(null)
+  const [errorImpresora, setErrorImpresora] = useState(null)
 
   const esActualizacion = !!pedido.pedidoExistenteId
 
@@ -57,6 +61,24 @@ export default function Ticket({ pedido, onVolver }) {
       setError('Error de conexión. Intenta de nuevo.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleImprimir = async () => {
+    if (!guardado) return
+    setImprimiendo(true)
+    setErrorImpresora(null)
+    try {
+      if (!nombreImpresora) {
+        const nombre = await conectarImpresora()
+        setNombreImpresora(nombre)
+      }
+      await imprimirTicket(pedido, guardado.numero)
+    } catch (e) {
+      setErrorImpresora(e.message)
+      setNombreImpresora(null)
+    } finally {
+      setImprimiendo(false)
     }
   }
 
@@ -299,6 +321,27 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
 
       {/* Botones */}
       <div style={{ padding: '12px 18px 32px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {bluetoothDisponible() && (
+          <>
+            <button onClick={handleImprimir} disabled={imprimiendo || !guardado} style={{
+              width: '100%', border: 0, padding: '16px', borderRadius: 14,
+              background: imprimiendo ? '#333' : '#1a1a2e',
+              border: `1px solid ${nombreImpresora ? '#6366f1' : C.border}`,
+              color: imprimiendo ? '#777' : nombreImpresora ? '#a5b4fc' : C.muted,
+              fontFamily: FONT, fontWeight: 800, fontSize: 15,
+              cursor: imprimiendo ? 'not-allowed' : 'pointer',
+              textTransform: 'uppercase', letterSpacing: 0.5,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}>
+              🖨 {imprimiendo ? 'Imprimiendo...' : nombreImpresora ? `Imprimir (${nombreImpresora})` : 'Imprimir ticket'}
+            </button>
+            {errorImpresora && (
+              <div style={{ fontSize: 11, color: '#ef4444', textAlign: 'center', fontWeight: 600, marginTop: -4 }}>
+                {errorImpresora}
+              </div>
+            )}
+          </>
+        )}
         <button onClick={enviarWhatsApp} style={{
           width: '100%', border: 0, padding: '16px', borderRadius: 14,
           background: '#22c55e', color: '#fff',
