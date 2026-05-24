@@ -23,7 +23,7 @@ export default function Login({ onLogin }) {
 
   return (
     <div style={{
-      width: '100%', minHeight: '100vh', background: C.bg, color: C.text,
+      width: '100%', minHeight: '100vh', background: '#000', color: C.text,
       fontFamily: FONT, display: 'flex', flexDirection: 'column',
       padding: '70px 28px 40px', boxSizing: 'border-box',
       position: 'relative', overflow: 'hidden',
@@ -41,8 +41,6 @@ export default function Login({ onLogin }) {
           alt="Grit Burger"
           style={{
             width: '100%', maxWidth: 280,
-            borderRadius: 16,
-            boxShadow: `0 20px 60px rgba(255,107,0,0.2)`,
             marginBottom: 28,
           }}
         />
