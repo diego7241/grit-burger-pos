@@ -116,7 +116,7 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
       fontFamily: FONT, display: 'flex', flexDirection: 'column',
     }}>
       {/* Header */}
-      <div style={{ padding: '54px 18px 16px', borderBottom: `1px solid ${C.border}`, background: C.card }}>
+      <div style={{ padding: '54px 18px 16px', borderBottom: `1px solid ${C.border}`, background: '#000' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
