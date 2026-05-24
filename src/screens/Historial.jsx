@@ -121,7 +121,7 @@ export default function Historial({ onBack }) {
 <body>
 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px">
   <div style="display:flex;align-items:center;gap:14px">
-    ${logoBase64 ? `<img src="${logoBase64}" style="height:52px;width:52px;border-radius:10px;object-fit:cover;flex-shrink:0" />` : ''}
+    ${logoBase64 ? `<img src="${logoBase64}" style="height:56px;width:auto;border-radius:10px" />` : ''}
     <div>
       <h1>Grit Burger <span class="accent">POS</span></h1>
       <div style="color:#666;margin-top:4px;font-size:14px;font-weight:600;text-transform:capitalize">${labelFechaLargo}</div>
