@@ -24,59 +24,68 @@ let _char = null
 
 export const bluetoothDisponible = () => !!navigator.bluetooth
 
+async function buscarChar(server) {
+  for (const svcUUID of SERVICES) {
+    try {
+      const svc = await server.getPrimaryService(svcUUID)
+      for (const charUUID of CHARS) {
+        try {
+          const c = await svc.getCharacteristic(charUUID)
+          if (c.properties.write || c.properties.writeWithoutResponse) return c
+        } catch (_) {}
+      }
+      try {
+        const chars = await svc.getCharacteristics()
+        for (const c of chars) {
+          if (c.properties.write || c.properties.writeWithoutResponse) return c
+        }
+      } catch (_) {}
+    } catch (_) {}
+  }
+  return null
+}
+
 export async function conectarImpresora() {
+  // Intentar reconectar dispositivos ya autorizados (sin mostrar el picker)
+  try {
+    const devices = await navigator.bluetooth.getDevices()
+    for (const d of devices) {
+      try {
+        const server = await d.gatt.connect()
+        const c = await buscarChar(server)
+        if (c) { _char = c; return d.name || 'Impresora' }
+      } catch (_) {}
+    }
+  } catch (_) {}
+
+  // Mostrar picker si no hay dispositivo autorizado
   const device = await navigator.bluetooth.requestDevice({
     acceptAllDevices: true,
     optionalServices: SERVICES,
   })
   const server = await device.gatt.connect()
-
-  // Intentar cada combinación de servicio + característica
-  for (const svcUUID of SERVICES) {
-    try {
-      const svc = await server.getPrimaryService(svcUUID)
-      // Primero intentar características conocidas
-      for (const charUUID of CHARS) {
-        try {
-          const c = await svc.getCharacteristic(charUUID)
-          if (c.properties.writeWithoutResponse || c.properties.write) {
-            _char = c
-            return device.name || 'Impresora'
-          }
-        } catch (_) {}
-      }
-      // Si no, buscar cualquier característica escribible en este servicio
-      try {
-        const chars = await svc.getCharacteristics()
-        for (const c of chars) {
-          if (c.properties.writeWithoutResponse || c.properties.write) {
-            _char = c
-            return device.name || 'Impresora'
-          }
-        }
-      } catch (_) {}
-    } catch (_) {}
-  }
+  const c = await buscarChar(server)
+  if (c) { _char = c; return device.name || 'Impresora' }
   throw new Error('No se encontró el servicio. Verifica que la impresora esté encendida.')
 }
 
 async function enviar(data) {
   if (!_char) throw new Error('Sin conexión a impresora')
   const CHUNK = 20
-  const usarSinRespuesta = _char.properties.writeWithoutResponse
   for (let i = 0; i < data.length; i += CHUNK) {
     const chunk = data.slice(i, i + CHUNK)
     try {
-      if (usarSinRespuesta) {
-        await _char.writeValueWithoutResponse(chunk)
-      } else {
+      // writeValue espera confirmación — más lento pero no pierde datos
+      if (_char.properties.write) {
         await _char.writeValue(chunk)
+      } else {
+        await _char.writeValueWithoutResponse(chunk)
       }
     } catch (e) {
       _char = null
       throw new Error('Error enviando datos: ' + e.message)
     }
-    await new Promise(r => setTimeout(r, 50))
+    await new Promise(r => setTimeout(r, 30))
   }
 }
 
