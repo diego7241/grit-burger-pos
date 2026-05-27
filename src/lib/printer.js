@@ -1,5 +1,4 @@
 // Web Bluetooth ESC/POS — 58mm thermal printer
-import { QR_GMAPS_BMP } from './qr-gmaps.js'
 
 const SERVICES = [
   '000018f0-0000-1000-8000-00805f9b34fb',
@@ -77,7 +76,8 @@ async function enviar(data) {
     const chunk = data.slice(i, i + CHUNK)
     try {
       if (_char.properties.write) {
-        await _char.writeValue(chunk)  // ACK hace control de flujo, sin delay extra
+        await _char.writeValue(chunk)
+        await new Promise(r => setTimeout(r, 8))  // buffer del printer
       } else {
         await _char.writeValueWithoutResponse(chunk)
         await new Promise(r => setTimeout(r, 20))
@@ -248,8 +248,7 @@ export async function imprimirTicket(pedido, numero) {
     t('\nGracias por tu visita!\ngritburguer.vercel.app\n'),
     t('-'.repeat(ANCHO) + '\n'),
     t('Te gusto? Dejanos tu resena!\n'),
-    QR_GMAPS_BMP,
-    t('\n* Google Maps *\n'),
+    t('Google Maps: Grit Burger\nMagdalena del Mar\n'),
     t('- '.repeat(ANCHO / 2) + '\n\n\n'),
     b(0x1D, 0x56, 0x42, 0x00),            // cortar papel
   )
