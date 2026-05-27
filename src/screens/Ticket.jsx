@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { C, FONT, DISPLAY, WHATSAPP_COCINA } from '../lib/theme'
 import { bluetoothDisponible, conectarImpresora, imprimirTicket, pruebaImprimir } from '../lib/printer'
+import { QR_GMAPS_PNG } from '../lib/qr-gmaps.js'
 
 const PAGO_COLORS = { yape: C.yape, plin: C.plin, tarjeta: '#2563eb', efectivo: '#16a34a' }
 
@@ -274,6 +275,13 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
 
           <div style={{ textAlign: 'center', marginTop: 14, fontSize: 10, color: '#999' }}>
             ¡Gracias por tu compra!<br />gritburguer.vercel.app
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 14, borderTop: '1px dashed #ddd', paddingTop: 12 }}>
+            <div style={{ fontSize: 9, color: '#888', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+              ¿Te gustó? Déjanos tu reseña
+            </div>
+            <img src={QR_GMAPS_PNG} alt="Google Maps reseña" style={{ width: 110, height: 110 }} />
+            <div style={{ fontSize: 9, color: '#999', marginTop: 6 }}>★ Google Maps</div>
           </div>
         </div>
 

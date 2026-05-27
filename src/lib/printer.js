@@ -1,4 +1,5 @@
 // Web Bluetooth ESC/POS — 58mm thermal printer
+import { QR_GMAPS_BMP } from './qr-gmaps.js'
 
 const SERVICES = [
   '000018f0-0000-1000-8000-00805f9b34fb',
@@ -241,6 +242,10 @@ export async function imprimirTicket(pedido, numero) {
   partes.push(
     b(0x1B, 0x61, 0x01),
     t('\nGracias por tu visita!\ngritburguer.vercel.app\n'),
+    t('-'.repeat(ANCHO) + '\n'),
+    t('Te gusto? Dejanos tu resena!\n'),
+    QR_GMAPS_BMP,
+    t('\n* Google Maps *\n'),
     t('- '.repeat(ANCHO / 2) + '\n\n\n'),
     b(0x1D, 0x56, 0x42, 0x00),            // cortar papel
   )
