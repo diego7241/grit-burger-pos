@@ -110,6 +110,40 @@ function norm(s) {
 }
 const t = s => enc.encode(norm(s))
 
+async function bytesLogo() {
+  try {
+    const img = await new Promise((res, rej) => {
+      const i = new Image()
+      i.crossOrigin = 'anonymous'
+      i.onload = () => res(i)
+      i.onerror = rej
+      i.src = '/logo.jpg'
+    })
+    const W = 200, scale = W / img.width
+    const H = Math.round(img.height * scale)
+    const cv = document.createElement('canvas')
+    cv.width = W; cv.height = H
+    const ctx = cv.getContext('2d')
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, W, H)
+    ctx.drawImage(img, 0, 0, W, H)
+    const px = ctx.getImageData(0, 0, W, H).data
+    const wBytes = Math.ceil(W / 8)
+    const bmp = new Uint8Array(wBytes * H)
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4
+        const gray = px[i] * 0.299 + px[i+1] * 0.587 + px[i+2] * 0.114
+        // Invertir: logo negro sobre blanco → imprime el texto/mascota
+        if (gray < 200) bmp[y * wBytes + Math.floor(x / 8)] |= (1 << (7 - x % 8))
+      }
+    }
+    const xL = wBytes & 0xFF, xH = (wBytes >> 8) & 0xFF
+    const yL = H & 0xFF, yH = (H >> 8) & 0xFF
+    return unir(new Uint8Array([0x1D, 0x76, 0x30, 0x00, xL, xH, yL, yH]), bmp)
+  } catch (_) { return null }
+}
+
 function fila(izq, der) {
   const d = String(der)
   const i = String(izq).substring(0, ANCHO - d.length - 1)
@@ -133,17 +167,28 @@ export async function imprimirTicket(pedido, numero) {
     (pedido.cliente ? `WA: ${pedido.cliente}` : 'WhatsApp')
 
   const esLlevarWA = pedido.tipo === 'llevar' || pedido.tipo === 'whatsapp'
+  const logo = await bytesLogo()
 
   const partes = [
     b(0x1B, 0x40),                        // init
     b(0x1B, 0x37, 0x09, 0xBF, 0x03),     // densidad máxima
     b(0x1B, 0x61, 0x01),                  // centro
-    b(0x1D, 0x21, 0x11), b(0x1B, 0x45, 0x01),
-    t('GRIT BURGER\n'),
-    b(0x1D, 0x21, 0x00), b(0x1B, 0x45, 0x00),
+  ]
+
+  if (logo) {
+    partes.push(logo, t('\n'))
+  } else {
+    partes.push(
+      b(0x1D, 0x21, 0x11), b(0x1B, 0x45, 0x01),
+      t('GRIT BURGER\n'),
+      b(0x1D, 0x21, 0x00), b(0x1B, 0x45, 0x00),
+    )
+  }
+
+  partes.push(
     t(`Ticket #${numero}\n`),
     t('-'.repeat(ANCHO) + '\n'),
-  ]
+  )
 
   // Nombre cliente destacado para llevar/WA
   if (esLlevarWA && pedido.cliente) {
