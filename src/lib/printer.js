@@ -4,11 +4,20 @@ const SERVICES = [
   '000018f0-0000-1000-8000-00805f9b34fb',
   'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
   '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+  '0000ff00-0000-1000-8000-00805f9b34fb',
+  '0000ffe0-0000-1000-8000-00805f9b34fb',
+  '00001101-0000-1000-8000-00805f9b34fb',
+  '0000ae30-0000-1000-8000-00805f9b34fb',
 ]
 const CHARS = [
   '00002af1-0000-1000-8000-00805f9b34fb',
+  '00002af0-0000-1000-8000-00805f9b34fb',
   'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f',
   '49535343-8841-43f4-a8d4-ecbe34729bb3',
+  '0000ff02-0000-1000-8000-00805f9b34fb',
+  '0000ff01-0000-1000-8000-00805f9b34fb',
+  '0000ffe1-0000-1000-8000-00805f9b34fb',
+  '0000ae01-0000-1000-8000-00805f9b34fb',
 ]
 
 let _char = null
@@ -21,15 +30,31 @@ export async function conectarImpresora() {
     optionalServices: SERVICES,
   })
   const server = await device.gatt.connect()
+
+  // Intentar cada combinación de servicio + característica
   for (const svcUUID of SERVICES) {
     try {
       const svc = await server.getPrimaryService(svcUUID)
+      // Primero intentar características conocidas
       for (const charUUID of CHARS) {
         try {
-          _char = await svc.getCharacteristic(charUUID)
-          return device.name || 'Impresora'
+          const c = await svc.getCharacteristic(charUUID)
+          if (c.properties.writeWithoutResponse || c.properties.write) {
+            _char = c
+            return device.name || 'Impresora'
+          }
         } catch (_) {}
       }
+      // Si no, buscar cualquier característica escribible en este servicio
+      try {
+        const chars = await svc.getCharacteristics()
+        for (const c of chars) {
+          if (c.properties.writeWithoutResponse || c.properties.write) {
+            _char = c
+            return device.name || 'Impresora'
+          }
+        }
+      } catch (_) {}
     } catch (_) {}
   }
   throw new Error('No se encontró el servicio. Verifica que la impresora esté encendida.')
