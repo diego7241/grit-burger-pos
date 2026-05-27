@@ -69,7 +69,7 @@ export default function Ticket({ pedido, onVolver }) {
     setImprimiendo(true)
     setErrorImpresora(null)
     const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Tiempo agotado. Intenta de nuevo.')), 15000)
+      setTimeout(() => reject(new Error('Tiempo agotado. Intenta de nuevo.')), 45000)
     )
     try {
       if (!nombreImpresora) {
@@ -79,7 +79,8 @@ export default function Ticket({ pedido, onVolver }) {
       await Promise.race([imprimirTicket(pedido, guardado.numero), timeout])
     } catch (e) {
       setErrorImpresora(e.message)
-      setNombreImpresora(null)
+      // Solo desconectar si es error real de BLE, no si fue timeout
+      if (!e.message.includes('Tiempo agotado')) setNombreImpresora(null)
     } finally {
       setImprimiendo(false)
     }

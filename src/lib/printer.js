@@ -75,17 +75,16 @@ async function enviar(data) {
   for (let i = 0; i < data.length; i += CHUNK) {
     const chunk = data.slice(i, i + CHUNK)
     try {
-      // writeValue espera confirmación — más lento pero no pierde datos
       if (_char.properties.write) {
-        await _char.writeValue(chunk)
+        await _char.writeValue(chunk)  // ACK hace control de flujo, sin delay extra
       } else {
         await _char.writeValueWithoutResponse(chunk)
+        await new Promise(r => setTimeout(r, 20))
       }
     } catch (e) {
       _char = null
       throw new Error('Error enviando datos: ' + e.message)
     }
-    await new Promise(r => setTimeout(r, 30))
   }
 }
 
