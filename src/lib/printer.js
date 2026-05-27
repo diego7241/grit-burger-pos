@@ -241,7 +241,7 @@ export async function imprimirTicket(pedido, numero) {
 
   partes.push(
     b(0x1B, 0x61, 0x01),
-    t('\nGracias por tu visita!\ngritburger.pe\n'),
+    t('\nGracias por tu visita!\ngritburguer.vercel.app\n'),
     t('- '.repeat(ANCHO / 2) + '\n\n\n'),
     b(0x1D, 0x56, 0x42, 0x00),            // cortar papel
   )

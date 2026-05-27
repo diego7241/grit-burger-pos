@@ -272,7 +272,7 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
           )}
 
           <div style={{ textAlign: 'center', marginTop: 14, fontSize: 10, color: '#999' }}>
-            ¡Gracias por tu compra!<br />gritburger.pe
+            ¡Gracias por tu compra!<br />gritburguer.vercel.app
           </div>
         </div>
 

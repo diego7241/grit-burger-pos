@@ -175,7 +175,7 @@ ${cierreCaja.map(({metodo,monto,count}) => `
   </tbody>
 </table>
 
-<div class="footer">Grit Burger POS · Lima, Perú · ${fecha} · gritburger.pe</div>
+<div class="footer">Grit Burger POS · Lima, Perú · ${fecha} · gritburguer.vercel.app</div>
 <script>window.onload=()=>window.print()</script>
 </body>
 </html>`
