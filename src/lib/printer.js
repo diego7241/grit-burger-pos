@@ -99,8 +99,16 @@ function unir(...arrays) {
 
 const enc = new TextEncoder()
 const b = (...xs) => new Uint8Array(xs)
-const t = s => enc.encode(s)
 const ANCHO = 32
+
+// Elimina acentos y caracteres especiales que la impresora no entiende
+function norm(s) {
+  return String(s)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')  // quitar diacríticos
+    .replace(/[^\x00-\x7F]/g, '?')   // reemplazar resto no-ASCII
+}
+const t = s => enc.encode(norm(s))
 
 function fila(izq, der) {
   const d = String(der)
@@ -128,6 +136,7 @@ export async function imprimirTicket(pedido, numero) {
 
   const partes = [
     b(0x1B, 0x40),                        // init
+    b(0x1B, 0x37, 0x09, 0xBF, 0x03),     // densidad máxima
     b(0x1B, 0x61, 0x01),                  // centro
     b(0x1D, 0x21, 0x11), b(0x1B, 0x45, 0x01),
     t('GRIT BURGER\n'),
