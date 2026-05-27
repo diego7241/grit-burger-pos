@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { C, FONT, DISPLAY, WHATSAPP_COCINA } from '../lib/theme'
-import { bluetoothDisponible, conectarImpresora, imprimirTicket } from '../lib/printer'
+import { bluetoothDisponible, conectarImpresora, imprimirTicket, pruebaImprimir } from '../lib/printer'
 
 const PAGO_COLORS = { yape: C.yape, plin: C.plin, tarjeta: '#2563eb', efectivo: '#16a34a' }
 
@@ -342,6 +342,18 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
               <div style={{ fontSize: 11, color: '#ef4444', textAlign: 'center', fontWeight: 600, marginTop: -4 }}>
                 {errorImpresora}
               </div>
+            )}
+            {nombreImpresora && (
+              <button onClick={async () => {
+                try { await pruebaImprimir() } catch (e) { setErrorImpresora(e.message) }
+              }} style={{
+                width: '100%', border: `1px solid #333`, padding: '10px', borderRadius: 10,
+                background: 'transparent', color: '#555',
+                fontFamily: FONT, fontWeight: 700, fontSize: 11,
+                cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.5,
+              }}>
+                🖨 Prueba texto plano
+              </button>
             )}
           </>
         )}

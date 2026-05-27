@@ -108,6 +108,13 @@ function fila(izq, der) {
   return i + ' '.repeat(Math.max(1, ANCHO - i.length - d.length)) + d
 }
 
+export async function pruebaImprimir() {
+  if (!_char) throw new Error('Impresora no conectada')
+  // Solo texto plano, sin ningún comando ESC/POS
+  const texto = 'GRIT BURGER\nPRUEBA DE IMPRESION\n1x Clasica  S/13.00\nTOTAL       S/13.00\n\n\n\n'
+  await enviar(new TextEncoder().encode(texto))
+}
+
 export async function imprimirTicket(pedido, numero) {
   if (!_char) throw new Error('Impresora no conectada')
 
