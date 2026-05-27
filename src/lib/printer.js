@@ -62,10 +62,21 @@ export async function conectarImpresora() {
 
 async function enviar(data) {
   if (!_char) throw new Error('Sin conexión a impresora')
-  const CHUNK = 100
+  const CHUNK = 20
+  const usarSinRespuesta = _char.properties.writeWithoutResponse
   for (let i = 0; i < data.length; i += CHUNK) {
-    await _char.writeValueWithoutResponse(data.slice(i, i + CHUNK))
-    await new Promise(r => setTimeout(r, 20))
+    const chunk = data.slice(i, i + CHUNK)
+    try {
+      if (usarSinRespuesta) {
+        await _char.writeValueWithoutResponse(chunk)
+      } else {
+        await _char.writeValue(chunk)
+      }
+    } catch (e) {
+      _char = null
+      throw new Error('Error enviando datos: ' + e.message)
+    }
+    await new Promise(r => setTimeout(r, 50))
   }
 }
 

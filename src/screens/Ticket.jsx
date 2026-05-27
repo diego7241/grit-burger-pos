@@ -68,12 +68,15 @@ export default function Ticket({ pedido, onVolver }) {
     if (!guardado) return
     setImprimiendo(true)
     setErrorImpresora(null)
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Tiempo agotado. Intenta de nuevo.')), 15000)
+    )
     try {
       if (!nombreImpresora) {
         const nombre = await conectarImpresora()
         setNombreImpresora(nombre)
       }
-      await imprimirTicket(pedido, guardado.numero)
+      await Promise.race([imprimirTicket(pedido, guardado.numero), timeout])
     } catch (e) {
       setErrorImpresora(e.message)
       setNombreImpresora(null)
