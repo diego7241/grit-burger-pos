@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { getConfig } from '../lib/menuDB'
 import { C, FONT, DISPLAY } from '../lib/theme'
+import { bluetoothDisponible, conectarImpresora, imprimirTicket } from '../lib/printer'
 
 // Lima es UTC-5, sin horario de verano
 function inicioHoyLima() {
@@ -17,6 +18,8 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
   const [confirmCobro, setConfirmCobro] = useState(null) // { mesa, pedido }
   const [cobrandoId, setCobrandoId] = useState(null)
   const [errorCobro, setErrorCobro] = useState(null)
+  const [imprimiendoId, setImprimiendoId] = useState(null)
+  const [nombreImpr, setNombreImpr] = useState(null)
   const [pagoModal, setPagoModal] = useState(null)
   const [confirmCancel, setConfirmCancel] = useState(null) // { label, pedidoId }
   const [cancelando, setCancelando] = useState(false)
@@ -65,6 +68,22 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [cargarPedidosHoy])
+
+  const reimprimir = async (pedido) => {
+    if (!bluetoothDisponible()) return
+    setImprimiendoId(pedido.id)
+    try {
+      if (!nombreImpr) {
+        const nombre = await conectarImpresora()
+        setNombreImpr(nombre)
+      }
+      await imprimirTicket(pedido, pedido.numero)
+    } catch (_) {
+      setNombreImpr(null)
+    } finally {
+      setImprimiendoId(null)
+    }
+  }
 
   const cancelarPedido = async () => {
     if (!confirmCancel) return
@@ -247,6 +266,20 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
                     >
                       ✓ Cobrar
                     </button>
+                    {bluetoothDisponible() && (
+                      <button
+                        onClick={() => reimprimir(ocupada)}
+                        disabled={imprimiendoId === ocupada.id}
+                        style={{
+                          padding: '7px 10px',
+                          background: 'rgba(99,102,241,0.08)',
+                          border: `1px solid ${color}44`,
+                          borderTop: 'none', borderLeft: `1px solid ${color}22`,
+                          color: imprimiendoId === ocupada.id ? '#555' : '#818cf8',
+                          fontWeight: 900, fontSize: 13, cursor: 'pointer',
+                        }}
+                      >{imprimiendoId === ocupada.id ? '…' : '🖨'}</button>
+                    )}
                     <button
                       onClick={() => setConfirmCancel({ label: `Mesa ${n}`, pedidoId: ocupada.id })}
                       style={{
@@ -319,6 +352,20 @@ export default function Panel({ onSelectTable, onTakeaway, onWhatsApp, onHistory
                             whiteSpace: 'nowrap',
                           }}
                         >✓ Cobrar</button>
+                      )}
+                      {bluetoothDisponible() && (
+                        <button
+                          onClick={() => reimprimir(p)}
+                          disabled={imprimiendoId === p.id}
+                          style={{
+                            width: 28, height: 28, borderRadius: 8,
+                            background: 'rgba(99,102,241,0.1)',
+                            border: '1px solid rgba(99,102,241,0.25)',
+                            color: imprimiendoId === p.id ? '#555' : '#818cf8',
+                            fontWeight: 900, fontSize: 13,
+                            cursor: 'pointer', flexShrink: 0,
+                          }}
+                        >{imprimiendoId === p.id ? '…' : '🖨'}</button>
                       )}
                       <button
                         onClick={() => setConfirmCancel({ label: p.cliente || (p.tipo === 'llevar' ? 'Para llevar' : 'WhatsApp'), pedidoId: p.id })}

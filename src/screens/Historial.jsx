@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { C, FONT, DISPLAY, WHATSAPP_COCINA } from '../lib/theme'
+import { bluetoothDisponible, conectarImpresora, imprimirReporte } from '../lib/printer'
 
 const PAGO_COLORS = { yape: C.yape, plin: C.plin, tarjeta: '#2563eb', efectivo: '#16a34a' }
 const PAGO_LABELS = { yape: 'Yape', plin: 'Plin', tarjeta: 'Tarjeta', efectivo: 'Efectivo' }
@@ -30,6 +31,8 @@ export default function Historial({ onBack }) {
   const [cancelando, setCancelando] = useState(false)
   const [confirmCobrar, setConfirmCobrar] = useState(null)
   const [cobrando, setCobrando] = useState(false)
+  const [imprimiendoReporte, setImprimiendoReporte] = useState(false)
+  const [nombreImpr, setNombreImpr] = useState(null)
 
   const esHoy = fecha === hoy
   const ayer = addDias(hoy, -1)
@@ -65,6 +68,22 @@ export default function Historial({ onBack }) {
     setCobrando(false)
     setConfirmCobrar(null)
     if (!err) cargar()
+  }
+
+  const imprimirReporteHandler = async () => {
+    if (!bluetoothDisponible()) return
+    setImprimiendoReporte(true)
+    try {
+      if (!nombreImpr) {
+        const nombre = await conectarImpresora()
+        setNombreImpr(nombre)
+      }
+      await imprimirReporte(pedidos, labelFechaLargo)
+    } catch (_) {
+      setNombreImpr(null)
+    } finally {
+      setImprimiendoReporte(false)
+    }
   }
 
   const cancelarPedido = async () => {
@@ -246,15 +265,31 @@ Pago: ${p.metodo_pago?.toUpperCase() || ''}${p.notas ? `\n\n📝 Nota: ${p.notas
           </div>
           <button onClick={cargar} style={{ background: 'transparent', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 18 }}>↻</button>
           {!loading && pedidos.length > 0 && (
-            <button onClick={generarReporte} style={{
-              background: C.accent, border: 'none', color: '#fff',
-              borderRadius: 9, padding: '6px 12px',
-              fontFamily: FONT, fontWeight: 800, fontSize: 11,
-              cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.5,
-              display: 'flex', alignItems: 'center', gap: 5,
-            }}>
-              📄 PDF
-            </button>
+            <>
+              <button onClick={generarReporte} style={{
+                background: C.accent, border: 'none', color: '#fff',
+                borderRadius: 9, padding: '6px 12px',
+                fontFamily: FONT, fontWeight: 800, fontSize: 11,
+                cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.5,
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}>
+                📄 PDF
+              </button>
+              {bluetoothDisponible() && (
+                <button onClick={imprimirReporteHandler} disabled={imprimiendoReporte} style={{
+                  background: imprimiendoReporte ? '#333' : '#1a1a2e',
+                  border: `1px solid ${nombreImpr ? '#6366f1' : C.border}`,
+                  color: imprimiendoReporte ? '#555' : '#818cf8',
+                  borderRadius: 9, padding: '6px 12px',
+                  fontFamily: FONT, fontWeight: 800, fontSize: 11,
+                  cursor: imprimiendoReporte ? 'not-allowed' : 'pointer',
+                  textTransform: 'uppercase', letterSpacing: 0.5,
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                  🖨 {imprimiendoReporte ? '...' : 'Ticket'}
+                </button>
+              )}
+            </>
           )}
         </div>
 

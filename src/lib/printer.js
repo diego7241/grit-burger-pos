@@ -186,6 +186,7 @@ export async function imprimirTicket(pedido, numero) {
   }
 
   partes.push(
+    t('Jr. Leoncio Prado 1189\nMagdalena del Mar\n'),
     t(`Ticket #${numero}\n`),
     t('-'.repeat(ANCHO) + '\n'),
   )
@@ -218,6 +219,9 @@ export async function imprimirTicket(pedido, numero) {
       t(fila(`${item.qty}x ${item.name}`, `S/${(item.price * item.qty).toFixed(2)}`) + '\n'),
       b(0x1B, 0x45, 0x00),
     )
+    if (item.categoria && item.categoria !== 'complementos') {
+      partes.push(t(`  ${norm(item.categoria)}\n`))
+    }
     if (notaLimpia) partes.push(t(`  > ${notaLimpia}\n`))
     for (const comp of compKids) {
       partes.push(t(fila(`  + ${comp.name}`, `S/${(comp.price * comp.qty).toFixed(2)}`) + '\n'))
@@ -248,6 +252,76 @@ export async function imprimirTicket(pedido, numero) {
     t('\n* Google Maps *\n'),
     t('- '.repeat(ANCHO / 2) + '\n\n\n'),
     b(0x1D, 0x56, 0x42, 0x00),            // cortar papel
+  )
+
+  await enviar(unir(...partes))
+}
+
+export async function imprimirReporte(pedidos, fechaLabel) {
+  if (!_char) throw new Error('Impresora no conectada')
+
+  const activos = pedidos.filter(p => p.estado !== 'cancelado')
+  const total = activos.reduce((s, p) => s + Number(p.total), 0)
+  const cancelados = pedidos.filter(p => p.estado === 'cancelado').length
+  const porMetodo = {}
+  for (const p of activos) {
+    const m = p.metodo_pago || 'sin pago'
+    porMetodo[m] = (porMetodo[m] || 0) + Number(p.total)
+  }
+  const logo = await bytesLogo()
+  const hora = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+
+  const partes = [
+    b(0x1B, 0x40),
+    b(0x1B, 0x37, 0x09, 0xBF, 0x03),
+    b(0x1B, 0x61, 0x01),
+  ]
+
+  if (logo) {
+    partes.push(logo, t('\n'))
+  } else {
+    partes.push(
+      b(0x1D, 0x21, 0x11), b(0x1B, 0x45, 0x01),
+      t('GRIT BURGER\n'),
+      b(0x1D, 0x21, 0x00), b(0x1B, 0x45, 0x00),
+    )
+  }
+
+  partes.push(
+    t('Jr. Leoncio Prado 1189\nMagdalena del Mar\n'),
+    b(0x1B, 0x45, 0x01), b(0x1D, 0x21, 0x01),
+    t('REPORTE DEL DIA\n'),
+    b(0x1D, 0x21, 0x00), b(0x1B, 0x45, 0x00),
+    t(`${norm(fechaLabel)}  ${hora}\n`),
+    b(0x1B, 0x61, 0x00),
+    t('-'.repeat(ANCHO) + '\n'),
+    b(0x1B, 0x45, 0x01), b(0x1D, 0x21, 0x01),
+    t(fila('TOTAL', `S/${total.toFixed(2)}`) + '\n'),
+    b(0x1D, 0x21, 0x00), b(0x1B, 0x45, 0x00),
+    t(fila('Pedidos', activos.length) + '\n'),
+  )
+
+  if (cancelados > 0) partes.push(t(fila('Cancelados', cancelados) + '\n'))
+
+  partes.push(t('-'.repeat(ANCHO) + '\n'))
+  for (const [metodo, monto] of Object.entries(porMetodo)) {
+    partes.push(t(fila(norm(metodo.toUpperCase()), `S/${monto.toFixed(2)}`) + '\n'))
+  }
+
+  partes.push(t('-'.repeat(ANCHO) + '\n'))
+  for (const p of [...activos].reverse()) {
+    const tipo = p.tipo === 'mesa' ? `Mesa ${p.mesa}` :
+      p.tipo === 'llevar' ? (p.cliente ? `Llevar ${p.cliente}` : 'Llevar') :
+      (p.cliente ? `WA ${p.cliente}` : 'WA')
+    partes.push(t(fila(`#${p.numero} ${norm(tipo)}`, `S/${Number(p.total).toFixed(2)}`) + '\n'))
+  }
+
+  partes.push(
+    t('-'.repeat(ANCHO) + '\n'),
+    b(0x1B, 0x61, 0x01),
+    t('\ngritburguer.vercel.app\n'),
+    t('- '.repeat(ANCHO / 2) + '\n\n\n'),
+    b(0x1D, 0x56, 0x42, 0x00),
   )
 
   await enviar(unir(...partes))

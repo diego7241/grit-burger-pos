@@ -230,6 +230,11 @@ ${pedido.notas ? `\n📝 Nota: ${pedido.notas}` : ''}`
                     <span>{item.qty}× {item.name}</span>
                     <span>S/{(item.price * item.qty).toFixed(2)}</span>
                   </div>
+                  {item.categoria && item.categoria !== 'complementos' && (
+                    <div style={{ fontSize: 9, color: '#888', marginTop: 1, fontWeight: 600, textTransform: 'capitalize', paddingLeft: 2 }}>
+                      {item.categoria}
+                    </div>
+                  )}
                   {notaLimpia && (
                     <div style={{ fontSize: 10, color: '#FF6B00', paddingLeft: 16, marginTop: 2, fontWeight: 600 }}>
                       📝 {notaLimpia}
